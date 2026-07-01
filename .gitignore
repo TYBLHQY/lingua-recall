@@ -1,0 +1,38 @@
+# ── Build ────────────────────────────────
+build/
+cmake-build-*/
+CMakeFiles/
+*.o
+*.so
+*.a
+*.so.*
+
+# ── QML / MOC ────────────────────────────
+moc_*.cpp
+*.moc
+*.cache
+*qmlcache*
+
+# ── IDE ───────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Plasma ───────────────────────────────
+*.plasmoid
+
+# ── CMake-generated QML module metadata ──
+*.qmltypes
+*_qml_module_dir_map.qrc
+
+# ── Session ──────────────────────────────
+.claude/
+
+# ── Temp ──────────────────────────────────
+/tmp/
