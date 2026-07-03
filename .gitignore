@@ -7,6 +7,9 @@ CMakeFiles/
 *.a
 *.so.*
 
+# ── Staged build artifacts (copied by make build) ──
+package/contents/lib/*
+
 # ── QML / MOC ────────────────────────────
 moc_*.cpp
 *.moc

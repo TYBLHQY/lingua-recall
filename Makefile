@@ -1,14 +1,16 @@
 # ── Lingua Recall Makefile ─────────────────────────────────
 # Usage:
-#   make             → build → install → restart (full deploy)
-#   make qml         → install → restart (QML-only, no C++ rebuild)
-#   make test        → plasmawindowed quick preview
-#   make build       → compile C++ → stage .so to package/
-#   make install     → kpackagetool6 update + clear cache
-#   make restart     → restart plasmashell (for panel widget)
-#   make configure   → cmake configure (needed once after clone)
-#   make clean       → remove build directory
-#   make status      → show git log + plasmoid status + module files
+#   make              → build → install → restart (full deploy)
+#   make qml          → install → restart (QML-only)
+#   make test         → plasmawindowed quick preview
+#   make check        → run all C++ unit tests (FsrsEngine + ReviewDb)
+#   make qml-check    → run QML integration tests
+#   make build        → compile C++ → stage .so to package/
+#   make install      → kpackagetool6 update + clear cache
+#   make restart      → restart plasmashell (for panel widget)
+#   make configure    → cmake configure (needed once after clone)
+#   make clean        → remove build directory
+#   make status       → show git log + plasmoid status + module files
 
 SHELL := /usr/bin/env bash
 PROJ  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -40,18 +42,49 @@ qml: install restart
 build:
 	@echo "==> [1/3] 编译 C++ 模块…"
 	cmake --build $(PROJ)/build -j$(JOBS) 2>&1 | tail -2
-	@echo "==> [2/3] 拷贝 .so 到包装…"
+	@echo "==> [2/3] 安装到 staging 目录…"
+	cmake --install $(PROJ)/build --prefix $(HOME)/.local 2>&1 | tail -2 || true
+	@echo "==> [3/3] 拷贝模块文件到包装…"
 	mkdir -p $(PLUGIN_DST)
-	cp -a $(PROJ)/build/liblingua_recall_helper.so $(PLUGIN_DST)/
-	cp -a $(PLUGIN_OUT)/lingua_recall_helperplugin.so $(PLUGIN_DST)/
-	ln -sf lingua_recall_helperplugin.so $(PLUGIN_DST)/liblingua_recall_helperplugin.so
-	@echo "==> [3/3] 完成。"
+	cp -a $(PLUGIN_OUT)/* $(PLUGIN_DST)/
+	@echo "     完成。"
 
-# ── Update plasmoid package + clear cache ─────────────────
+# ── Run C++ unit tests (FsrsEngine + ReviewDb) ────────────
+.PHONY: check
+check:
+	@echo "==> 编译 FsrsEngine 测试…"
+	cmake --build $(PROJ)/build -j$(JOBS) --target tst_FsrsEngine 2>&1 | tail -2
+	@echo ""
+	./build/tst_FsrsEngine
+	@echo ""
+	@echo "==> 编译 ReviewDb 测试…"
+	cmake --build $(PROJ)/build -j$(JOBS) --target tst_ReviewDb 2>&1 | tail -2
+	@echo ""
+	./build/tst_ReviewDb
+
+# ── Run QML integration tests (needs build + stage first) ─
+.PHONY: qml-check
+qml-check: build
+	@echo "==> 运行 QML 测试…"
+	qml6 -platform offscreen -I $(PROJ)/package/contents/lib $(PROJ)/tests/tst_RecallHelper.qml 2>&1 | grep -v "^qml: " | tail +2
+	@echo "     完成。"
+
+# ── Install/upgrade plasmoid package + clear cache ────────
 .PHONY: install
 install:
-	@echo "==> [1/2] 更新 Plasma 包…"
-	kpackagetool6 -t Plasma/Applet -u $(PROJ)/package/ 2>&1 | grep -E "Upgrading|Success|Error|Failed" || echo "     (已是最新)"
+	@echo "==> [1/2] 安装/更新 Plasma 包…"
+	@if kpackagetool6 -t Plasma/Applet -i $(PROJ)/package/ >/dev/null 2>&1; then \
+		echo "     首次安装完成。"; \
+	else \
+		kpackagetool6 -t Plasma/Applet -r $(PLASMOID_ID) >/dev/null 2>&1 || true; \
+		kpackagetool6 -t Plasma/Applet -i $(PROJ)/package/ 2>&1 \
+			| grep -E "Installing|Success|Error|Failed" || true; \
+	fi
+	@if kpackagetool6 -t Plasma/Applet -s $(PLASMOID_ID) >/dev/null 2>&1; then \
+		echo "     ✅ $(PLASMOID_ID)"; \
+	else \
+		echo "     ⚠️  安装失败"; \
+	fi
 	@echo "==> [2/2] 清除 QML 缓存…"
 	rm -rf $(CACHE_DIR)
 	@echo "     完成。"
@@ -68,11 +101,17 @@ restart:
 	@sleep 2
 	@echo "     完成。"
 
-# ── Quick test with plasmawindowed (不会重启面板) ──────────
+# ── Quick preview with plasmawindowed (不会重启面板) ─────
 .PHONY: test
 test: install
 	@echo "==> 启动 plasmawindowed…"
 	@echo "     关闭后继续。"
+	plasmawindowed $(PLASMOID_ID)
+
+# ── Launch standalone (no panel restart, faster) ─────────
+.PHONY: launch
+launch:
+	@echo "==> 启动 plasmoid 预览…"
 	plasmawindowed $(PLASMOID_ID)
 
 # ── CMake configure (只需第一次) ──────────────────────────
@@ -97,9 +136,11 @@ status:
 	@git -C $(PROJ) log --oneline -3 2>/dev/null || echo "  (no commits)"
 	@echo ""
 	@echo "=== Plasmoid 安装状态 ==="
-	@ls -d $(HOME)/.local/share/plasma/plasmoids/$(PLASMOID_ID) 2>/dev/null \
-		&& echo "  ✅ $(PLASMOID_ID) 已安装" \
-		|| echo "  ❌ 未安装 (运行 make install)"
+	@if kpackagetool6 -t Plasma/Applet -s $(PLASMOID_ID) >/dev/null 2>&1; then \
+		echo "  ✅ $(PLASMOID_ID) 已安装"; \
+	else \
+		echo "  ❌ 未安装 (运行 make install 或 make full)"; \
+	fi
 	@echo ""
 	@echo "=== C++ 模块文件 ==="
 	@ls -la $(PLUGIN_DST)/*.so 2>/dev/null || echo "  (无)"
