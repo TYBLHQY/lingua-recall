@@ -525,7 +525,7 @@ PlasmoidItem {
                                     implicitWidth: Kirigami.Units.iconSizes.large
                                     implicitHeight: Kirigami.Units.iconSizes.large
                                     Layout.alignment: Qt.AlignHCenter
-                                    colorGroup: Kirigami.Theme.DisabledColorGroup
+                                    opacity: 0.4
                                 }
 
                                 PlasmaComponents3.Label {
