@@ -4,110 +4,139 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Lingua Recall** — a KDE Plasma 6 plasmoid (applet) framework scaffold, architected after [Lingua Spanner](../lingua-spanner). Currently a skeleton with no business logic; ready for spaced-repetition / recall assistant feature development.
+**Lingua Recall** — a KDE Plasma 6 plasmoid for FSRS-6 spaced-repetition vocabulary review. Works alongside [Lingua Spanner](../lingua-spanner): Spanner saves translations to `linguaspanner.db`, Recall reads them for review scheduling.
 
 - **Type:** Plasma/Applet (KPackageStructure)
 - **Target:** Plasma 6.0+
 - **Plugin ID:** `org.kde.lingua-recall`
-- **License:** GPL-2.0+ (tbd)
+- **License:** GPL-2.0-or-later
+- **Database:** shares `~/.config/linguaspanner/linguaspanner.db` with lingua-spanner
+
+## Architecture
+
+Three-layer C++ design with zero-Qt algorithm core:
+
+```
+FsrsEngine (static lib fsrs_engine, pure C++, no Qt headers)
+  ↑
+ReviewDb  (static lib review_db, depends on Qt6::Sql + fsrs_engine)
+  ↑
+RecallHelper (QML_ELEMENT, part of LinguaRecallHelper QML plugin)
+  ↑
+QML UI (main.qml)
+```
+
+### FsrsEngine (`src/FsrsEngine.h/.cpp`)
+FSRS-6 algorithm math — 21 trainable W parameters, all formulas (forgetting curve with trainable decay, stability/difficulty update, same-day review, interval calculation). Pure `std::array<double,21>`, no Qt dependency.
+
+### ReviewDb (`src/ReviewDb.h/.cpp`)
+SQLite CRUD layer managing three tables in `linguaspanner.db`:
+- **review_cards** — per-translation FSRS state (S, D, state, due, reps, lapses)
+- **review_log** — append-only review history (rating, S/D before/after, R, ms timestamp)
+- **fsrs_params** — FSRS-6 global params singleton (21 W values, desired_retention, max_interval)
+
+`reviewCard()` is the key integration point: loads card state → runs FsrsEngine::review() → updates card + inserts review_log → returns JSON.
+
+### RecallHelper (`src/RecallHelper.h/.cpp`)
+QML_ELEMENT façade exposing all card/review/param operations as Q_INVOKABLE methods. QML wrapper at `package/contents/ui/RecallHelperQml.qml`.
+
+### QML UI (`package/contents/ui/main.qml`)
+Three-tab review panel:
+- **Review** — flashcard with tap-to-reveal + Again/Hard/Good/Easy buttons
+- **New Words** — translations not yet in review_cards, with "Learn" button
+- **Stats** — aggregate counts and card-by-state breakdown
 
 ## Directory Structure
 
 ```
 lingua-recall/
-├── CLAUDE.md                  # This file — AI development guide
-├── CMakeLists.txt             # C++ build (RecallHelper QML module)
-├── Makefile                   # Dev workflow: build, install, test, restart
-├── dev                        # Convenience script: ./dev build|full|qml|restart
-├── .github/workflows/
-│   └── build.yml              # CI: Qt 6.7 + cmake → package → GitHub Release
+├── CMakeLists.txt             # Static libs fsrs_engine + review_db → QML module
+├── Makefile                   # Dev workflow
+├── dev                        # Convenience: ./dev build|full|qml|restart
+├── src/
+│   ├── FsrsEngine.h/.cpp      # FSRS-6 algorithm engine (static lib)
+│   ├── ReviewDb.h/.cpp        # SQLite CRUD (static lib)
+│   └── RecallHelper.h/.cpp    # QML_ELEMENT façade
 ├── package/
-│   ├── metadata.json          # Plugin ID: org.kde.lingua-recall, v0.1.0
-│   ├── translate/.gitkeep     # i18n translation files (future)
+│   ├── metadata.json
 │   └── contents/
 │       ├── config/
-│       │   ├── main.xml       # KConfig XT schema (fontSizeBase placeholder)
-│       │   └── config.qml     # Shell that loads ConfigGeneral.qml
-│       ├── lib/LinguaRecallHelper/  # C++ QML module (.so + qmldir, staged by build)
+│       │   ├── main.xml       # KConfig XT (fontSizeBase)
+│       │   └── config.qml
+│       ├── lib/LinguaRecallHelper/  # Built .so + qmldir (CI-staged)
 │       └── ui/
-│           ├── main.qml              # PlasmoidItem skeleton
-│           ├── ConfigGeneral.qml     # Placeholder KCM settings page
-│           └── RecallHelperQml.qml   # QML wrapper for C++ RecallHelper
-├── src/
-│   ├── RecallHelper.h         # QML_ELEMENT C++ QObject (scaffold)
-│   ├── RecallHelper.cpp       # Stub with hello() verification
-│   └── .gitkeep
+│           ├── main.qml
+│           ├── ConfigGeneral.qml    # Font size + FSRS desired retention
+│           └── RecallHelperQml.qml
 ├── tests/
-│   ├── tst_RecallHelper.qml   # Qt Quick Test for RecallHelper
-│   └── .gitkeep
-└── .gitignore
+│   ├── tst_FsrsEngine.cpp     # 23 algorithm unit tests (QTest)
+│   ├── tst_ReviewDb.cpp       # 23 integration tests (in-memory SQLite)
+│   └── tst_RecallHelper.qml   # 5 QML plugin tests
+└── .github/workflows/build.yml
 ```
-
-## Architecture
-
-### C++ QML Module (`LinguaRecallHelper`)
-
-A single QML_ELEMENT C++ class (`RecallHelper : QObject`) exposed via `qt_add_qml_module`. Currently a stub containing `Q_INVOKABLE QString hello()` for module-load verification. Extend with domain-specific `Q_INVOKABLE` methods, properties, and signals as business logic develops.
-
-Relevant files:
-- `src/RecallHelper.h` / `src/RecallHelper.cpp` — C++ source
-- `package/contents/ui/RecallHelperQml.qml` — QML wrapper that instantiates the helper
-
-### Config pipeline
-
-`main.xml` (KConfig XT) → `config.qml` (shell) → `ConfigGeneral.qml` (actual widget). Currently only `fontSizeBase` is defined. Add KConfig XT entries in `main.xml` and corresponding UI in `ConfigGeneral.qml` as features grow.
-
-### Activation
-
-The `PlasmoidItem` in `main.qml` provides:
-- **compactRepresentation**: taskbar icon (`adjustcoloreffects`)
-- **fullRepresentation**: popup panel with header, content area, status bar
-
-Customize the click/shortcut activation pattern from `main.qml` (mirror lingua-spanner's `handlePanelOpened()` → selection/freshness pattern if clipboard interaction is needed, or replace entirely for the recall domain).
-
-### Placeholder areas (ready for filling)
-
-| Location | Purpose | Status |
-|----------|---------|--------|
-| `package/contents/ui/main.qml` | PlasmoidItem — main UI | Skeleton panel |
-| `package/contents/ui/ConfigGeneral.qml` | KCM settings | Skeleton with font size |
-| `package/contents/config/main.xml` | KConfig XT schema | Single entry (fontSizeBase) |
-| `src/RecallHelper.h/.cpp` | C++ helpers | Stub with hello() |
-| `tests/tst_RecallHelper.qml` | Unit tests | Stub test |
-| `package/translate/` | i18n files | Empty |
 
 ## Development
 
 ```sh
-# Info
-make status          # git log, plasmoid install status, module file info
-make configure       # cmake configure (first time after clone)
+# First time
+make configure
 
 # Iterate
-make build           # cmake --build + stage .so to package (C++ changes)
-make qml             # kpackagetool6 -u + restart (QML-only changes)
-make full            # full deploy (build + install + restart)
-make test            # install + plasmawindowed preview (no shell restart)
-make restart         # kquitapp6 + plasmashell --replace
+make build           # cmake --build + stage .so to package/
+make full            # build + install + restart plasmashell
+make qml             # install + restart (QML-only)
+make launch          # plasmawindowed preview (no restart)
+make install         # kpackagetool6 -i / -r + -i (first time or update)
 
 # Tests
-qml6 -I package/contents/lib tests/tst_RecallHelper.qml   # Unit tests
+make check           # 46 C++ unit tests (FsrsEngine 23 + ReviewDb 23)
+make qml-check       # 5 QML integration tests (requires build first)
 
-# Debug
-journalctl -f -o cat | grep -E "RecallHelper|qml:"       # Plasmoid logs
+./dev build|full|qml|restart|test   # Convenience wrapper
 ```
+
+### Test details
+
+```sh
+# Run a single test suite
+./build/tst_FsrsEngine
+./build/tst_ReviewDb
+
+# Run a single test function
+./build/tst_ReviewDb "test_createCard_success"
+
+# QML tests
+qml6 -platform offscreen -I package/contents/lib tests/tst_RecallHelper.qml
+```
+
+### Debug
+
+```sh
+journalctl -f -o cat | grep -E "RecallHelper|ReviewDb|qml:"
+QT_LOGGING_RULES="qt.qml.import*=true" plasmawindowed org.kde.lingua-recall
+```
+
+## FSRS-6 Parameters
+
+Default 21 W values (optimized from the open-spaced-repetition/fsrs-rs reference):
+
+```
+[0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001,
+ 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483,
+ 0.6014, 1.8729, 0.5425, 0.0912, 0.0658, 0.1542]
+```
+
+Key: w[0..3]=S₀, w[4..5]=D₀, w[6..10]=success update, w[11..14]=failure update, w[15]=Hard penalty, w[16]=Easy bonus, w[17..19]=same-day, w[20]=forgetting curve decay.
 
 ## Commit workflow
 
-1. Verify git status is clean (`git status`)
-2. Stage only relevant files with `git add -A`
-3. Use conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `style:`, `refactor:`
-4. For feature/fix commits with significant changes, include a body with bullet points
-5. Tag format: `v<major>.<minor>.<patch>` — matched to `package/metadata.json` → `KPlugin.Version`
+1. `git status` → `git add -A`
+2. Conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `style:`, `refactor:`
+3. Tag: `v<major>.<minor>.<patch>` — match `package/metadata.json` → `KPlugin.Version`
 
-## Update / release workflow
+## Release workflow
 
-1. Bump `package/metadata.json` → `KPlugin.Version` to the new version string
+1. Bump `package/metadata.json` → `KPlugin.Version`
 2. Commit: `chore: bump metadata.json version to X.X.X`
 3. Tag: `git tag vX.X.X HEAD`
-4. Push with `git push --atomic origin main vX.X.X`
+4. Push: `git push --atomic origin main vX.X.X`
