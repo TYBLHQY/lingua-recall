@@ -14,7 +14,7 @@ KCMUtils.SimpleKCM {
     // KConfig XT bindings.
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
-    property alias cfg_fontFamily: fontFamilyCombo.editText
+    property string cfg_fontFamily: ""
     property string cfg_fontFamilyDefault: ""
 
     // DB bridge (for FSRS params).
@@ -104,6 +104,9 @@ KCMUtils.SimpleKCM {
                             } else {
                                 editText = saved
                             }
+                        } else {
+                            // No saved font — show system default
+                            editText = Qt.application.font.family
                         }
                         _ready = true
                     }
@@ -121,7 +124,7 @@ KCMUtils.SimpleKCM {
                     flat: true
                     Accessible.name: i18n("Reset to default font")
                     onClicked: {
-                        fontFamilyCombo.editText = ""
+                        fontFamilyCombo.editText = Qt.application.font.family
                         page.cfg_fontFamily = ""
                     }
                 }
