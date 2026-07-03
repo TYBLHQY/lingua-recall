@@ -104,7 +104,7 @@ PlasmoidItem {
 
     // Compact: taskbar icon.
     compactRepresentation: Kirigami.Icon {
-        source: "adjustcoloreffects"
+        source: "dialog-ok"
         implicitWidth: Kirigami.Units.iconSizes.small
         implicitHeight: Kirigami.Units.iconSizes.small
 

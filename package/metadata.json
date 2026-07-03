@@ -5,7 +5,7 @@
         "Name[zh_CN]": "Lingua Recall",
         "Description": "Spaced-repetition recall assistant — framework scaffold",
         "Description[zh_CN]": "间隔重复回忆辅助 — 框架占位",
-        "Icon": "adjustcoloreffects",
+        "Icon": "dialog-ok",
         "Version": "0.1.0",
         "License": "GPL-2.0-or-later",
         "Authors": [
