@@ -283,14 +283,40 @@ PlasmoidItem {
             anchors.margins: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.smallSpacing
 
-            // HEADER.
+            // HEADER — Card X of Y | state badge | pin.
             RowLayout {
                 Layout.fillWidth: true
 
-                Kirigami.Heading {
-                    text: i18n("Lingua Recall")
-                    level: 2
+                PlasmaComponents3.Label {
+                    text: currentCard
+                          ? i18n("Card %1 of %2",
+                                 currentCardIndex + 1, cardQueue.length)
+                          : ""
+                    font.pixelSize: root.fontSizeSmall
+                    font.family: root.fontFamily || undefined
+                    color: Kirigami.Theme.disabledTextColor
                     Layout.fillWidth: true
+                }
+
+                // FSRS state badge (review cards only).
+                PlasmaComponents3.Label {
+                    text: currentCard && !currentCard.isNew
+                          ? root.stateLabel(currentCard.state)
+                          : ""
+                    font.pixelSize: root.fontSizeSmall
+                    font.family: root.fontFamily || undefined
+                    font.weight: Font.Bold
+                    color: {
+                        var s = currentCard && !currentCard.isNew
+                                ? currentCard.state : ""
+                        switch (s) {
+                        case "learning":    return Kirigami.Theme.neutralTextColor
+                        case "review":      return Kirigami.Theme.positiveTextColor
+                        case "relearning":  return Kirigami.Theme.negativeTextColor
+                        default:            return Kirigami.Theme.disabledTextColor
+                        }
+                    }
+                    visible: currentCard !== null && !currentCard.isNew
                 }
 
                 QQC2.Button {
@@ -321,41 +347,38 @@ PlasmoidItem {
                     width: parent.width
                     spacing: Kirigami.Units.smallSpacing
 
-                    // Progress header.
+                    // Rating buttons (above card, always visible, disabled before reveal).
                     RowLayout {
                         Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
                         visible: currentCard !== null
+                        enabled: answerRevealed
+                        opacity: enabled ? 1.0 : 0.4
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
 
-                        PlasmaComponents3.Label {
-                            text: currentCard
-                                  ? i18n("Card %1 of %2",
-                                         currentCardIndex + 1, cardQueue.length)
-                                  : ""
-                            font.pixelSize: root.fontSizeSmall
-                            font.family: root.fontFamily || undefined
-                            color: Kirigami.Theme.disabledTextColor
+                        QQC2.Button {
+                            text: i18n("1  Again")
+                            icon.name: "edit-delete"
                             Layout.fillWidth: true
+                            onClicked: rateCurrentCard(1)
                         }
-
-                        // FSRS state badge (review cards only).
-                        PlasmaComponents3.Label {
-                            text: currentCard && !currentCard.isNew
-                                  ? root.stateLabel(currentCard.state)
-                                  : ""
-                            font.pixelSize: root.fontSizeSmall
-                            font.family: root.fontFamily || undefined
-                            font.weight: Font.Bold
-                            color: {
-                                var s = currentCard && !currentCard.isNew
-                                        ? currentCard.state : ""
-                                switch (s) {
-                                case "learning":    return Kirigami.Theme.neutralTextColor
-                                case "review":      return Kirigami.Theme.positiveTextColor
-                                case "relearning":  return Kirigami.Theme.negativeTextColor
-                                default:            return Kirigami.Theme.disabledTextColor
-                                }
-                            }
-                            visible: currentCard !== null && !currentCard.isNew
+                        QQC2.Button {
+                            text: i18n("2  Hard")
+                            icon.name: "arrow-down"
+                            Layout.fillWidth: true
+                            onClicked: rateCurrentCard(2)
+                        }
+                        QQC2.Button {
+                            text: i18n("3  Good")
+                            icon.name: "arrow-right"
+                            Layout.fillWidth: true
+                            onClicked: rateCurrentCard(3)
+                        }
+                        QQC2.Button {
+                            text: i18n("4  Easy")
+                            icon.name: "arrow-up"
+                            Layout.fillWidth: true
+                            onClicked: rateCurrentCard(4)
                         }
                     }
 
@@ -846,49 +869,14 @@ PlasmoidItem {
                         }
                     }
 
-                    // Rating buttons (shown after reveal).
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Kirigami.Units.smallSpacing
+                    // Keyboard shortcut hint (below card, after reveal).
+                    PlasmaComponents3.Label {
                         visible: answerRevealed && currentCard !== null
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-
-                            QQC2.Button {
-                                text: i18n("1  Again")
-                                icon.name: "edit-delete"
-                                Layout.fillWidth: true
-                                onClicked: rateCurrentCard(1)
-                            }
-                            QQC2.Button {
-                                text: i18n("2  Hard")
-                                icon.name: "arrow-down"
-                                Layout.fillWidth: true
-                                onClicked: rateCurrentCard(2)
-                            }
-                            QQC2.Button {
-                                text: i18n("3  Good")
-                                icon.name: "arrow-right"
-                                Layout.fillWidth: true
-                                onClicked: rateCurrentCard(3)
-                            }
-                            QQC2.Button {
-                                text: i18n("4  Easy")
-                                icon.name: "arrow-up"
-                                Layout.fillWidth: true
-                                onClicked: rateCurrentCard(4)
-                            }
-                        }
-
-                        PlasmaComponents3.Label {
-                            text: i18n("Press 1–4 on keyboard")
-                            font.pixelSize: root.fontSizeSmall
-                            font.family: root.fontFamily || undefined
-                            color: Kirigami.Theme.disabledTextColor
-                            Layout.alignment: Qt.AlignHCenter
-                        }
+                        text: i18n("Press 1–4 on keyboard")
+                        font.pixelSize: root.fontSizeSmall
+                        font.family: root.fontFamily || undefined
+                        color: Kirigami.Theme.disabledTextColor
+                        Layout.alignment: Qt.AlignHCenter
                     }
 
                     // Tap hint (before reveal).
