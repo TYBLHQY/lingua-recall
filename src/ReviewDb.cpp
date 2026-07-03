@@ -453,7 +453,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
         "UPDATE review_cards SET "
         "  stability = ?, difficulty = ?, state = ?, "
         "  due = ?,"
-        "  last_review_at = strftime('%Y-%m-%dT%H:%M:%S','now'),"
+        "  last_review_at = strftime('%Y-%m-%dT%H:%M:%S','now') || 'Z',"
         "  elapsed_days = ?, scheduled_days = ?,"
         "  reps = ?, lapses = ?,"
         "  updated_at = strftime('%Y-%m-%dT%H:%M:%S','now') "
@@ -535,7 +535,7 @@ QString ReviewDb::getDueCards(int limit)
         "       t.target_lang, t.result_json, t.created_at AS trans_created_at "
         "FROM review_cards rc "
         "JOIN translations t ON t.id = rc.translation_id "
-        "WHERE rc.due <= strftime('%Y-%m-%dT%H:%M:%S','now') "
+        "WHERE rc.due <= (strftime('%Y-%m-%dT%H:%M:%S','now') || 'Z') "
         "  AND rc.state IN ('learning','review','relearning') "
         "ORDER BY rc.due ASC LIMIT ?"));
     q.bindValue(0, limit);
@@ -729,7 +729,7 @@ QString ReviewDb::getStats()
     // Due count (approximate: due today)
     q.exec(QStringLiteral(
         "SELECT COUNT(*) FROM review_cards "
-        "WHERE due <= strftime('%Y-%m-%dT%H:%M:%S','now') "
+        "WHERE due <= (strftime('%Y-%m-%dT%H:%M:%S','now') || 'Z') "
         "  AND state IN ('learning','review','relearning')"));
     if (q.next())
         stats[QStringLiteral("due_now")] = q.value(0).toInt();
@@ -768,7 +768,7 @@ QString ReviewDb::getStats()
     // Cards due within the next 7 days (including already due)
     q.exec(QStringLiteral(
         "SELECT COUNT(*) FROM review_cards "
-        "WHERE due <= datetime('now', '+7 days') "
+        "WHERE due <= (datetime('now', '+7 days') || 'Z') "
         "  AND state IN ('learning','review','relearning')"));
     if (q.next())
         stats[QStringLiteral("due_this_week")] = q.value(0).toInt();

@@ -22,10 +22,8 @@ PlasmoidItem {
 
     // Refresh on expand (covers keyboard shortcut and any non-click open).
     onExpandedChanged: {
-        if (expanded) {
-            panelRoot.forceActiveFocus()
+        if (expanded)
             refreshMergedCards()
-        }
     }
 
     // Config.
@@ -132,19 +130,56 @@ PlasmoidItem {
     // === Merged card queue management ===
 
     function refreshMergedCards() {
-        // New words first (translations without review cards).
+        // All active review cards (learning/review/relearning), ordered by due.
+        // Uses exec() to bypass the due<=now filter in getDueCards().
+        var reviewCards = recall.parseArray(recall.exec(
+            "SELECT rc.id, rc.translation_id, rc.stability, rc.difficulty,"
+            + " rc.state, rc.due, rc.last_review_at, rc.elapsed_days,"
+            + " rc.scheduled_days, rc.reps, rc.lapses,"
+            + " t.input_text, t.cleaned_input, t.source_lang, t.target_lang,"
+            + " t.result_json, t.engine"
+            + " FROM review_cards rc"
+            + " JOIN translations t ON t.id = rc.translation_id"
+            + " WHERE rc.state IN ('learning','review','relearning')"
+            + " AND rc.due <= (strftime('%Y-%m-%dT%H:%M:%S','now') || 'Z')"
+            + " ORDER BY rc.due ASC"
+            + " LIMIT 999"))
+
+        // Compute retrievability for each review card.
+        for (var j = 0; j < reviewCards.length; j++) {
+            var c = reviewCards[j]
+            c.isNew = false
+            var elapsed = 0
+            if (c.last_review_at) {
+                var last = new Date(c.last_review_at)
+                var diffMs = new Date() - last
+                elapsed = diffMs / 86400000 // ms → days
+                if (elapsed < 0) elapsed = 0
+            }
+            c.retrievability = _calcRetrievability(c.stability, elapsed)
+        }
+
+        // New words (translations without review cards).
         var newWords = recall.parseArray(recall.getNewCards(999))
         for (var i = 0; i < newWords.length; i++)
             newWords[i].isNew = true
-        // Then due cards.
-        var due = recall.parseArray(recall.getDueCards(50))
-        for (var j = 0; j < due.length; j++)
-            due[j].isNew = false
-        cardQueue = newWords.concat(due)
+
+        // Review cards first, then new words.
+        cardQueue = reviewCards.concat(newWords)
         currentCardIndex = 0
         currentCard = cardQueue.length > 0 ? cardQueue[0] : null
         answerRevealed = false
         refreshStats()
+    }
+
+    /// FSRS-6 retrievability formula: R(t,S) = (1 + factor·t/S)^(-w[20])
+    function _calcRetrievability(stability, elapsedDays) {
+        if (!stability || stability <= 0 || elapsedDays === undefined) return 0
+        // Default w[20] = 0.1542 (may differ if user loaded custom params,
+        // but close enough for display purposes).
+        var w20 = 0.1542
+        var factor = Math.pow(0.9, -1 / w20) - 1
+        return Math.pow(1 + factor * elapsedDays / stability, -w20)
     }
 
     function rateCurrentCard(rating) {
@@ -185,6 +220,11 @@ PlasmoidItem {
         case "relearning":  return i18n("Relearning")
         default:            return state
         }
+    }
+
+    // Refresh stats cache from DB.
+    function refreshStats() {
+        statsCache = recall.parseObject(recall.getStats())
     }
 
     // Init DB on load.
