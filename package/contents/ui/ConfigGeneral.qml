@@ -14,7 +14,7 @@ KCMUtils.SimpleKCM {
     // KConfig XT bindings.
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
-    property alias cfg_fontFamily: fontFamilyField.text
+    property alias cfg_fontFamily: fontFamilyCombo.editText
     property string cfg_fontFamilyDefault: ""
 
     // DB bridge (for FSRS params).
@@ -83,10 +83,48 @@ KCMUtils.SimpleKCM {
             PlasmaComponents3.Label {
                 text: i18n("Font Family:")
             }
-            QQC2.TextField {
-                id: fontFamilyField
-                placeholderText: i18n("System default")
+            RowLayout {
                 Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC2.ComboBox {
+                    id: fontFamilyCombo
+                    editable: true
+                    Layout.fillWidth: true
+
+                    property bool _ready: false
+
+                    Component.onCompleted: {
+                        model = Qt.fontFamilies()
+                        var saved = page.cfg_fontFamily
+                        if (saved && saved.length > 0) {
+                            var idx = find(saved)
+                            if (idx >= 0) {
+                                currentIndex = idx
+                            } else {
+                                editText = saved
+                            }
+                        }
+                        _ready = true
+                    }
+
+                    onEditTextChanged: {
+                        if (_ready)
+                            page.cfg_fontFamily = editText
+                    }
+                }
+
+                QQC2.Button {
+                    icon.name: "edit-clear"
+                    implicitWidth: Kirigami.Units.iconSizes.medium
+                    implicitHeight: Kirigami.Units.iconSizes.medium
+                    flat: true
+                    Accessible.name: i18n("Reset to default font")
+                    onClicked: {
+                        fontFamilyCombo.editText = ""
+                        page.cfg_fontFamily = ""
+                    }
+                }
             }
         }
 
