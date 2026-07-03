@@ -103,6 +103,32 @@ PlasmoidItem {
         return []
     }
 
+    // Flat grid models for column-aligned display (spanner pattern).
+    readonly property var _flatWordModel: {
+        var words = currentNewWord
+            ? root.extractAiWords(currentNewWord.result_json)
+            : []
+        var m = []
+        for (var i = 0; i < words.length; i++) {
+            m.push({ text: words[i].word || "", bold: true, fillWidth: false, color: "" })
+            m.push({ text: words[i].pos || "", bold: false, fillWidth: false, color: Kirigami.Theme.neutralTextColor })
+            m.push({ text: words[i].meaning || "", bold: false, fillWidth: true, color: "" })
+        }
+        return m
+    }
+
+    readonly property var _flatCollocationModel: {
+        var colls = currentNewWord
+            ? root.extractCollocations(currentNewWord.result_json)
+            : []
+        var m = []
+        for (var i = 0; i < colls.length; i++) {
+            m.push({ text: colls[i].phrase || "", bold: true, fillWidth: false, color: "" })
+            m.push({ text: colls[i].translation || "", bold: false, fillWidth: true, color: "" })
+        }
+        return m
+    }
+
 
     function refreshDueCards() {
         dueCards = recall.parseArray(recall.getDueCards(50))
@@ -1003,47 +1029,18 @@ PlasmoidItem {
                                         }
 
                                         Repeater {
-                                            model: root.extractAiWords(
-                                                currentNewWord.result_json)
+                                            model: root._flatWordModel
 
-                                            delegate: Item {
+                                            delegate: Text {
                                                 required property var modelData
-                                                Layout.columnSpan: 3
-                                                Layout.fillWidth: true
-                                                implicitHeight: Math.max(
-                                                    wordLabel.implicitHeight,
-                                                    posLabel.implicitHeight,
-                                                    meaningLabel.implicitHeight)
-
-                                                RowLayout {
-                                                    anchors.fill: parent
-                                                    spacing: Kirigami.Units.largeSpacing
-
-                                                    PlasmaComponents3.Label {
-                                                        id: wordLabel
-                                                        text: modelData.word || ""
-                                                        font.bold: true
-                                                        font.pixelSize: root.fontSizeSmall
-                                                        font.family: root.fontFamily || undefined
-                                                        Layout.preferredWidth: parent.width * 0.25
-                                                    }
-                                                    PlasmaComponents3.Label {
-                                                        id: posLabel
-                                                        text: modelData.pos || ""
-                                                        color: Kirigami.Theme.neutralTextColor
-                                                        font.pixelSize: root.fontSizeSmall
-                                                        font.family: root.fontFamily || undefined
-                                                        Layout.preferredWidth: parent.width * 0.15
-                                                    }
-                                                    PlasmaComponents3.Label {
-                                                        id: meaningLabel
-                                                        text: modelData.meaning || ""
-                                                        font.pixelSize: root.fontSizeSmall
-                                                        font.family: root.fontFamily || undefined
-                                                        wrapMode: Text.WordWrap
-                                                        Layout.fillWidth: true
-                                                    }
-                                                }
+                                                text: modelData.text
+                                                font.bold: modelData.bold
+                                                font.pixelSize: root.fontSizeSmall
+                                                font.family: root.fontFamily || undefined
+                                                color: modelData.color || Kirigami.Theme.textColor
+                                                wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
+                                                Layout.fillWidth: modelData.fillWidth || false
+                                                Layout.alignment: Qt.AlignTop
                                             }
                                         }
                                     }
@@ -1098,35 +1095,18 @@ PlasmoidItem {
                                         }
 
                                         Repeater {
-                                            model: root.extractCollocations(
-                                                currentNewWord.result_json)
+                                            model: root._flatCollocationModel
 
-                                            delegate: Item {
+                                            delegate: Text {
                                                 required property var modelData
-                                                Layout.columnSpan: 2
-                                                Layout.fillWidth: true
-                                                implicitHeight: phraseLabel.implicitHeight
-
-                                                RowLayout {
-                                                    anchors.fill: parent
-                                                    spacing: Kirigami.Units.largeSpacing
-
-                                                    PlasmaComponents3.Label {
-                                                        id: phraseLabel
-                                                        text: modelData.phrase || ""
-                                                        font.bold: true
-                                                        font.pixelSize: root.fontSizeSmall
-                                                        font.family: root.fontFamily || undefined
-                                                        Layout.preferredWidth: parent.width * 0.4
-                                                    }
-                                                    PlasmaComponents3.Label {
-                                                        text: modelData.translation || ""
-                                                        font.pixelSize: root.fontSizeSmall
-                                                        font.family: root.fontFamily || undefined
-                                                        wrapMode: Text.WordWrap
-                                                        Layout.fillWidth: true
-                                                    }
-                                                }
+                                                text: modelData.text
+                                                font.bold: modelData.bold
+                                                font.pixelSize: root.fontSizeSmall
+                                                font.family: root.fontFamily || undefined
+                                                color: modelData.color || Kirigami.Theme.textColor
+                                                wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
+                                                Layout.fillWidth: modelData.fillWidth || false
+                                                Layout.alignment: Qt.AlignTop
                                             }
                                         }
                                     }
