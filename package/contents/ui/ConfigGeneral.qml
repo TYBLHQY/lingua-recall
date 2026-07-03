@@ -208,12 +208,29 @@ KCMUtils.SimpleKCM {
         }
 
         PlasmaComponents3.Label {
-            text: i18n("Lingua Recall v0.1.0 — FSRS-6 powered vocabulary review. "
+            text: i18n("Lingua Recall v0.2.0 — FSRS-6 powered vocabulary review. "
                        + "Uses the Free Spaced Repetition Scheduler v6 with 21 "
                        + "trainable parameters.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
+        }
+
+        PlasmaComponents3.Label {
+            text: i18n("Works alongside Lingua Spanner: Spanner saves translations, "
+                       + "Recall schedules reviews.")
+            color: Kirigami.Theme.disabledTextColor
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+        }
+
+        PlasmaComponents3.Label {
+            text: "<a href=\"https://github.com/TYBLHQY/lingua-recall\">"
+                  + i18n("View on GitHub") + "</a>"
+            onLinkActivated: Qt.openUrlExternally(link)
+            color: Kirigami.Theme.linkColor
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
         }
     }
 }

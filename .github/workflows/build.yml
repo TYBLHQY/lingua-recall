@@ -56,6 +56,11 @@ jobs:
       - name: Build C++ helper module
         run: cmake --build build -j$(nproc)
 
+      - name: Run C++ unit tests
+        run: |
+          ./build/tst_FsrsEngine
+          ./build/tst_ReviewDb
+
       - name: Stage QML module files into package
         run: |
           mkdir -p package/contents/lib/LinguaRecallHelper

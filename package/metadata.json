@@ -3,19 +3,19 @@
         "Id": "org.kde.lingua-recall",
         "Name": "Lingua Recall",
         "Name[zh_CN]": "Lingua Recall",
-        "Description": "Spaced-repetition recall assistant — framework scaffold",
-        "Description[zh_CN]": "间隔重复回忆辅助 — 框架占位",
+        "Description": "FSRS-6 spaced-repetition vocabulary review assistant",
+        "Description[zh_CN]": "FSRS-6 间隔重复单词复习助手",
         "Icon": "dialog-ok",
-        "Version": "0.1.0",
+        "Version": "0.2.0",
         "License": "GPL-2.0-or-later",
         "Authors": [
             {
-                "Name": "",
+                "Name": "J. Lee",
                 "Email": ""
             }
         ],
         "Category": "Utilities",
-        "Website": ""
+        "Website": "https://github.com/TYBLHQY/lingua-recall"
     },
     "KPackageStructure": "Plasma/Applet",
     "X-Plasma-API-Minimum-Version": "6.0"

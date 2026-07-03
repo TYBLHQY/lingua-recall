@@ -41,10 +41,13 @@ SQLite CRUD layer managing three tables in `linguaspanner.db`:
 QML_ELEMENT façade exposing all card/review/param operations as Q_INVOKABLE methods. QML wrapper at `package/contents/ui/RecallHelperQml.qml`.
 
 ### QML UI (`package/contents/ui/main.qml`)
-Three-tab review panel:
-- **Review** — flashcard with tap-to-reveal + Again/Hard/Good/Easy buttons
-- **New Words** — translations not yet in review_cards, with "Learn" button
-- **Stats** — aggregate counts and card-by-state breakdown
+Single-view panel (merged card queue — new words first, then due review cards):
+- **Card display** — tap/Space to reveal answer, then rate with Again/Hard/Good/Easy
+- **Status bar** — today's reviews, due count, new count, total cards
+- **Keyboard-driven** — 1-4 to rate, Ctrl+P to pin, Space to reveal
+
+Cards are loaded into a merged queue via `refreshMergedCards()`: new translations
+first (no FSRS state yet), then due review cards ordered by ascending due date.
 
 ## Directory Structure
 
@@ -87,13 +90,38 @@ make full            # build + install + restart plasmashell
 make qml             # install + restart (QML-only)
 make launch          # plasmawindowed preview (no restart)
 make install         # kpackagetool6 -i / -r + -i (first time or update)
+make test            # install + plasmawindowed (full preview cycle)
+make status          # show git log + plasmoid status + module files
+make clean           # remove build directory
 
 # Tests
 make check           # 46 C++ unit tests (FsrsEngine 23 + ReviewDb 23)
 make qml-check       # 5 QML integration tests (requires build first)
 
-./dev build|full|qml|restart|test   # Convenience wrapper
+./dev build|full|qml|restart|test|status   # Convenience wrapper
 ```
+
+### Keyboard Shortcuts (popup panel)
+
+| Key | Action |
+|-----|--------|
+| `Space` | Reveal answer |
+| `1` | Rate Again |
+| `2` | Rate Hard |
+| `3` | Rate Good |
+| `4` | Rate Easy |
+| `Ctrl+P` | Toggle pin (keep panel open) |
+
+### Configuration
+
+KConfig XT entries (via `package/contents/config/main.xml`):
+- `fontSizeBase` — base font size in px (default: 14)
+- `fontFamily` — font family override (empty → system default)
+
+Config UI at `package/contents/ui/ConfigGeneral.qml` with additional FSRS controls
+that persist to the `fsrs_params` table:
+- Desired retention (slider, 80%–97%)
+- Max interval (days, 30–36500)
 
 ### Test details
 
@@ -140,3 +168,12 @@ Key: w[0..3]=S₀, w[4..5]=D₀, w[6..10]=success update, w[11..14]=failure upda
 2. Commit: `chore: bump metadata.json version to X.X.X`
 3. Tag: `git tag vX.X.X HEAD`
 4. Push: `git push --atomic origin main vX.X.X`
+
+## CI (`build.yml`)
+
+GitHub Actions on `ubuntu-24.04` with Qt 6.7:
+- **Configure** → cmake with `CMAKE_INSTALL_PREFIX=$HOME/.local`
+- **Build** → cmake --build (C++ helper module)
+- **Stage** → copy .so + qmldir into `package/contents/lib/LinguaRecallHelper/`
+- **Package** → `tar.gz` of `package/` directory
+- **Release** (tagged commits only) → create GitHub Release with artifact, verifying tag matches metadata.json version
