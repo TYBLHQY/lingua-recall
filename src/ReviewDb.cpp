@@ -592,7 +592,8 @@ QString ReviewDb::getNewCards(int limit)
     QSqlQuery q(db);
     q.prepare(QStringLiteral(
         "SELECT t.id, t.input_text, t.cleaned_input, "
-        "       t.source_lang, t.target_lang, t.result_json, t.created_at "
+        "       t.source_lang, t.target_lang, t.engine, "
+        "       t.result_json, t.created_at "
         "FROM translations t "
         "LEFT JOIN review_cards rc ON rc.translation_id = t.id "
         "WHERE rc.id IS NULL "
@@ -610,8 +611,9 @@ QString ReviewDb::getNewCards(int limit)
         row[QStringLiteral("cleaned_input")] = q.value(2).toString();
         row[QStringLiteral("source_lang")] = q.value(3).toString();
         row[QStringLiteral("target_lang")] = q.value(4).toString();
-        row[QStringLiteral("result_json")] = q.value(5).toString();
-        row[QStringLiteral("created_at")] = q.value(6).toString();
+        row[QStringLiteral("engine")] = q.value(5).toString();
+        row[QStringLiteral("result_json")] = q.value(6).toString();
+        row[QStringLiteral("created_at")] = q.value(7).toString();
         rows.append(row);
     }
 

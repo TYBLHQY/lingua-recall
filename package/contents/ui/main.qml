@@ -37,8 +37,10 @@ PlasmoidItem {
     property int currentCardIndex: 0
     property bool answerRevealed: false
 
-    // New Words tab: which item is showing its preview.
-    property int expandedNewIndex: -1
+    // New Words tab: single-word "next" mode.
+    property var currentNewWord: null
+    property int newWordIndex: 0
+    property bool newWordRevealed: false
 
     // Stats cache.
     property var statsCache: ({})
@@ -69,18 +71,64 @@ PlasmoidItem {
         try {
             var j = JSON.parse(resultJson)
             if (j.examples && Array.isArray(j.examples)) {
-                return j.examples.join("\n")
+                return j.examples
             }
             // Some providers nest examples inside translation
             if (j.translation) {
                 try {
                     var t = JSON.parse(j.translation)
                     if (t.examples && Array.isArray(t.examples))
-                        return t.examples.join("\n")
+                        return t.examples
+                } catch(e) {}
+            }
+        } catch(e) {}
+        return []
+    }
+
+    function extractPhonetic(resultJson) {
+        if (!resultJson) return ""
+        try {
+            var j = JSON.parse(resultJson)
+            if (j.phonetic) return j.phonetic
+            if (j.translation) {
+                try {
+                    var t = JSON.parse(j.translation)
+                    if (t.phonetic) return t.phonetic
                 } catch(e) {}
             }
         } catch(e) {}
         return ""
+    }
+
+    function extractDefinitions(resultJson) {
+        if (!resultJson) return []
+        try {
+            var j = JSON.parse(resultJson)
+            if (j.definitions && Array.isArray(j.definitions)) return j.definitions
+            if (j.translation) {
+                try {
+                    var t = JSON.parse(j.translation)
+                    if (t.definitions && Array.isArray(t.definitions))
+                        return t.definitions
+                } catch(e) {}
+            }
+        } catch(e) {}
+        return []
+    }
+
+    function extractPartsOfSpeech(resultJson) {
+        if (!resultJson) return []
+        try {
+            var j = JSON.parse(resultJson)
+            if (j.pos && Array.isArray(j.pos)) return j.pos
+            if (j.translation) {
+                try {
+                    var t = JSON.parse(j.translation)
+                    if (t.pos && Array.isArray(t.pos)) return t.pos
+                } catch(e) {}
+            }
+        } catch(e) {}
+        return []
     }
 
     function refreshDueCards() {
@@ -96,9 +144,50 @@ PlasmoidItem {
     }
 
     function refreshNewCards() {
-        newCards = recall.parseArray(recall.getNewCards(20))
-        expandedNewIndex = -1
+        newCards = recall.parseArray(recall.getNewCards(999))
+        newWordIndex = 0
+        currentNewWord = newCards.length > 0 ? newCards[0] : null
+        newWordRevealed = false
         refreshStats()
+    }
+
+    function nextNewWord() {
+        if (newWordIndex + 1 < newCards.length) {
+            newWordIndex++
+            currentNewWord = newCards[newWordIndex]
+            newWordRevealed = false
+        }
+    }
+
+    function previousNewWord() {
+        if (newWordIndex - 1 >= 0) {
+            newWordIndex--
+            currentNewWord = newCards[newWordIndex]
+            newWordRevealed = false
+        }
+    }
+
+    function learnCurrentNewWord() {
+        if (!currentNewWord) return
+        var cid = recall.createCard(currentNewWord.id)
+        if (cid && cid.length > 0) {
+            // Remove from list and advance.
+            newCards.splice(newWordIndex, 1)
+            if (newWordIndex < newCards.length) {
+                currentNewWord = newCards[newWordIndex]
+            } else if (newCards.length > 0) {
+                newWordIndex = 0
+                currentNewWord = newCards[0]
+            } else {
+                currentNewWord = null
+                // Auto-switch to review tab when all learned.
+                currentTab = 0
+                refreshDueCards()
+                return
+            }
+            newWordRevealed = false
+            refreshStats()
+        }
     }
 
     function refreshStats() {
@@ -124,15 +213,6 @@ PlasmoidItem {
             answerRevealed = false
         }
         refreshStats()
-    }
-
-    function learnNewCard(translationId) {
-        var cid = recall.createCard(translationId)
-        if (cid && cid.length > 0) {
-            // Switch to review tab and refresh.
-            currentTab = 0
-            refreshDueCards()
-        }
     }
 
     // Human-readable retelling of the card state.
@@ -374,17 +454,26 @@ PlasmoidItem {
                             }
 
                             // Example sentences (revealed).
-                            PlasmaComponents3.Label {
-                                text: answerRevealed && currentCard
-                                      ? root.extractExamples(currentCard.result_json)
-                                      : ""
-                                font.pixelSize: Math.max(6, root.fs - 2)
-                                font.italic: true
-                                color: Kirigami.Theme.disabledTextColor
+                            ColumnLayout {
+                                visible: answerRevealed && currentCard !== null
                                 Layout.fillWidth: true
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.WordWrap
-                                visible: text.length > 0
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Repeater {
+                                    model: answerRevealed && currentCard
+                                           ? root.extractExamples(currentCard.result_json)
+                                           : []
+
+                                    delegate: PlasmaComponents3.Label {
+                                        text: "• " + modelData
+                                        font.pixelSize: Math.max(6, root.fs - 2)
+                                        font.italic: true
+                                        color: Kirigami.Theme.disabledTextColor
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        horizontalAlignment: Text.AlignHCenter
+                                    }
+                                }
                             }
 
                             // FSRS Metrics Grid (revealed, after first review).
@@ -631,12 +720,13 @@ PlasmoidItem {
                     }
                 }
 
-                // ===== TAB 1: New Words =====
+                // ===== TAB 1: New Words (single-card "next" mode) =====
                 ColumnLayout {
                     visible: currentTab === 1
                     anchors.fill: parent
                     spacing: Kirigami.Units.smallSpacing
 
+                    // Header: title + progress.
                     RowLayout {
                         Layout.fillWidth: true
 
@@ -647,133 +737,321 @@ PlasmoidItem {
                         }
 
                         PlasmaComponents3.Label {
-                            text: newCards.length === 0
-                                  ? i18n("None")
-                                  : i18np("1 word", "%1 words", newCards.length)
+                            text: newCards.length > 0
+                                  ? i18n("%1 of %2",
+                                         newWordIndex + 1, newCards.length)
+                                  : i18n("Done")
                             color: Kirigami.Theme.disabledTextColor
                             font.pixelSize: Math.max(6, root.fs - 2)
                         }
                     }
 
-                    ListView {
+                    // Single-word card area.
+                    Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        model: newCards
-                        clip: true
-                        spacing: Kirigami.Units.smallSpacing
+                        color: Kirigami.Theme.backgroundColor
+                        border.color: newWordRevealed
+                                      ? Kirigami.Theme.focusColor
+                                      : Kirigami.Theme.alternateBackgroundColor
+                        border.width: 1
+                        radius: 4
 
-                        delegate: Rectangle {
-                            id: newCardDelegate
-                            required property int index
-                            required property var modelData
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: Kirigami.Units.largeSpacing
+                            spacing: Kirigami.Units.smallSpacing
 
-                            width: parent.width
-                            height: colLayout.implicitHeight
-                                      + 2 * Kirigami.Units.smallSpacing
-                            color: Kirigami.Theme.backgroundColor
-                            radius: 4
-                            border.color: expandedNewIndex === newCardDelegate.index
-                                          ? Kirigami.Theme.focusColor
-                                          : Kirigami.Theme.alternateBackgroundColor
-                            border.width: 1
+                            // Centered word area (stretches to fill).
+                            Item { Layout.fillHeight: true; visible: currentNewWord }
 
-                            ColumnLayout {
-                                id: colLayout
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.margins: Kirigami.Units.smallSpacing
-                                spacing: Kirigami.Units.smallSpacing
+                            // Word/phrase.
+                            Kirigami.Heading {
+                                text: currentNewWord ? currentNewWord.input_text : ""
+                                level: 2
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignHCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                font.weight: Font.Bold
+                                visible: currentNewWord !== null
+                            }
 
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Kirigami.Units.smallSpacing
+                            // Phonetic transcription (before reveal).
+                            PlasmaComponents3.Label {
+                                text: currentNewWord && !newWordRevealed
+                                      ? root.extractPhonetic(currentNewWord.result_json)
+                                      : ""
+                                font.pixelSize: Math.max(7, root.fs - 1)
+                                font.italic: true
+                                color: Kirigami.Theme.disabledTextColor
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                visible: text.length > 0
+                            }
 
-                                    ColumnLayout {
+                            // Cleaned input (subtitle).
+                            PlasmaComponents3.Label {
+                                text: {
+                                    if (!currentNewWord) return ""
+                                    if (!currentNewWord.cleaned_input) return ""
+                                    if (currentNewWord.cleaned_input === currentNewWord.input_text)
+                                        return ""
+                                    return currentNewWord.cleaned_input
+                                }
+                                font.pixelSize: Math.max(6, root.fs - 3)
+                                color: Kirigami.Theme.disabledTextColor
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                visible: text.length > 0
+                            }
+
+                            // Language direction.
+                            PlasmaComponents3.Label {
+                                text: currentNewWord
+                                    ? (currentNewWord.source_lang || "?")
+                                      + " → " + (currentNewWord.target_lang || "?")
+                                    : ""
+                                font.pixelSize: Math.max(6, root.fs - 4)
+                                color: Kirigami.Theme.disabledTextColor
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                visible: currentNewWord !== null
+                            }
+
+                            // --- Revealed content (after tap or click Show) ---
+                            Kirigami.Separator {
+                                Layout.fillWidth: true
+                                visible: newWordRevealed && currentNewWord !== null
+                                Layout.topMargin: Kirigami.Units.smallSpacing
+                            }
+
+                            // Translation.
+                            PlasmaComponents3.Label {
+                                text: newWordRevealed && currentNewWord
+                                      ? root.extractTranslation(currentNewWord.result_json)
+                                      : ""
+                                font.pixelSize: Math.max(8, root.fs + 1)
+                                font.weight: Font.Bold
+                                color: Kirigami.Theme.linkColor
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                visible: text.length > 0
+                            }
+
+                            // Phonetic (after reveal, if not shown before).
+                            PlasmaComponents3.Label {
+                                text: currentNewWord && newWordRevealed
+                                      ? root.extractPhonetic(currentNewWord.result_json)
+                                      : ""
+                                font.pixelSize: Math.max(7, root.fs - 1)
+                                font.italic: true
+                                color: Kirigami.Theme.disabledTextColor
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                visible: text.length > 0
+                            }
+
+                            // Definitions / Parts of speech grid.
+                            GridLayout {
+                                visible: newWordRevealed && currentNewWord !== null
+                                Layout.fillWidth: true
+                                Layout.topMargin: Kirigami.Units.smallSpacing
+                                columns: 2
+                                rowSpacing: Kirigami.Units.smallSpacing
+                                columnSpacing: Kirigami.Units.largeSpacing
+
+                                // Definitions.
+                                Repeater {
+                                    model: currentNewWord && newWordRevealed
+                                           ? root.extractDefinitions(
+                                                 currentNewWord.result_json)
+                                           : []
+
+                                    delegate: Item {
                                         Layout.fillWidth: true
-                                        spacing: 2
+                                        Layout.columnSpan: 2
+                                        height: Kirigami.Units.gridUnit
 
-                                        PlasmaComponents3.Label {
-                                            text: modelData.input_text
-                                            font.weight: Font.Bold
-                                            font.pixelSize: Math.max(8, root.fs)
-                                            elide: Text.ElideRight
-                                        }
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            spacing: Kirigami.Units.smallSpacing
 
-                                        PlasmaComponents3.Label {
-                                            text: {
-                                                var src = modelData.source_lang || "?"
-                                                var tgt = modelData.target_lang || "?"
-                                                return src + " → " + tgt
+                                            Rectangle {
+                                                width: 4
+                                                height: parent.height
+                                                radius: 2
+                                                color: Kirigami.Theme.neutralTextColor
                                             }
-                                            font.pixelSize: Math.max(6, root.fs - 4)
-                                            color: Kirigami.Theme.disabledTextColor
-                                        }
-                                    }
-
-                                    QQC2.Button {
-                                        text: i18n("Learn")
-                                        icon.name: "list-add"
-                                        implicitWidth: Kirigami.Units.gridUnit * 4
-                                        onClicked: {
-                                            // Collapse this item first.
-                                            expandedNewIndex = -1
-                                            root.learnNewCard(modelData.id)
+                                            PlasmaComponents3.Label {
+                                                text: modelData
+                                                font.pixelSize: Math.max(6, root.fs - 2)
+                                                wrapMode: Text.WordWrap
+                                                Layout.fillWidth: true
+                                            }
                                         }
                                     }
                                 }
 
-                                // Expandable preview (translation text).
-                                PlasmaComponents3.Label {
-                                    text: {
-                                        if (expandedNewIndex !== newCardDelegate.index)
-                                            return ""
-                                        if (!modelData.result_json) return ""
-                                        var t = root.extractTranslation(
-                                            modelData.result_json)
-                                        if (t) return i18n("→ %1", t)
-                                        return i18n("(no translation data)")
-                                    }
-                                    font.pixelSize: Math.max(7, root.fs - 1)
-                                    color: Kirigami.Theme.linkColor
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                    visible: expandedNewIndex === newCardDelegate.index
-                                    Layout.topMargin: Kirigami.Units.smallSpacing
-                                }
+                                // Parts of speech.
+                                Repeater {
+                                    model: currentNewWord && newWordRevealed
+                                           ? root.extractPartsOfSpeech(
+                                                 currentNewWord.result_json)
+                                           : []
 
-                                // Examples (if available).
-                                PlasmaComponents3.Label {
-                                    text: {
-                                        if (expandedNewIndex !== newCardDelegate.index)
-                                            return ""
-                                        return root.extractExamples(
-                                            modelData.result_json)
+                                    delegate: PlasmaComponents3.Label {
+                                        text: "[" + modelData + "]"
+                                        font.pixelSize: Math.max(6, root.fs - 3)
+                                        color: Kirigami.Theme.disabledTextColor
+                                        font.italic: true
                                     }
-                                    font.pixelSize: Math.max(6, root.fs - 2)
-                                    font.italic: true
-                                    color: Kirigami.Theme.disabledTextColor
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                    visible: text.length > 0
                                 }
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    expandedNewIndex = expandedNewIndex === newCardDelegate.index
-                                        ? -1 : newCardDelegate.index
+                            // Example sentences.
+                            ColumnLayout {
+                                visible: newWordRevealed && currentNewWord !== null
+                                Layout.fillWidth: true
+                                Layout.topMargin: Kirigami.Units.smallSpacing
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Repeater {
+                                    model: currentNewWord && newWordRevealed
+                                           ? root.extractExamples(
+                                                 currentNewWord.result_json)
+                                           : []
+
+                                    delegate: PlasmaComponents3.Label {
+                                        text: "• " + modelData
+                                        font.pixelSize: Math.max(6, root.fs - 2)
+                                        font.italic: true
+                                        color: Kirigami.Theme.disabledTextColor
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                    }
                                 }
+                            }
+
+                            // Engine attribution.
+                            PlasmaComponents3.Label {
+                                text: currentNewWord && newWordRevealed
+                                      && currentNewWord.engine
+                                      ? i18n("via %1", currentNewWord.engine)
+                                      : ""
+                                font.pixelSize: Math.max(5, root.fs - 5)
+                                color: Kirigami.Theme.disabledTextColor
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                visible: text.length > 0
+                                Layout.topMargin: Kirigami.Units.smallSpacing
+                            }
+
+                            // Empty state.
+                            ColumnLayout {
+                                visible: currentNewWord === null
+                                anchors.centerIn: parent
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Kirigami.Icon {
+                                    source: "list-add"
+                                    implicitWidth: Kirigami.Units.iconSizes.large
+                                    implicitHeight: Kirigami.Units.iconSizes.large
+                                    Layout.alignment: Qt.AlignHCenter
+                                    opacity: 0.4
+                                }
+
+                                PlasmaComponents3.Label {
+                                    text: i18n("All new words learned!")
+                                    font.pixelSize: Math.max(8, root.fs + 2)
+                                    font.weight: Font.Bold
+                                    color: Kirigami.Theme.positiveTextColor
+                                    Layout.alignment: Qt.AlignHCenter
+                                }
+
+                                PlasmaComponents3.Label {
+                                    text: i18n("Add more translations\nwith Lingua Spanner")
+                                    color: Kirigami.Theme.disabledTextColor
+                                    font.italic: true
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignHCenter
+                                    horizontalAlignment: Text.AlignHCenter
+                                    font.pixelSize: Math.max(6, root.fs - 2)
+                                }
+                            }
+
+                            Item { Layout.fillHeight: true; visible: currentNewWord !== null }
+                        }
+
+                        // Tap to reveal.
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (currentNewWord && !newWordRevealed)
+                                    newWordRevealed = true
+                            }
+                        }
+                    }
+
+                    // Bottom: action buttons.
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+                        visible: currentNewWord !== null
+
+                        // Show button (before reveal).
+                        PlasmaComponents3.Button {
+                            text: i18n("Show")
+                            icon.name: "document-preview-archive"
+                            Layout.fillWidth: true
+                            visible: !newWordRevealed
+                            onClicked: newWordRevealed = true
+                        }
+
+                        // Action row (after reveal).
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: newWordRevealed
+                            spacing: Kirigami.Units.smallSpacing
+
+                            // Previous word.
+                            QQC2.Button {
+                                icon.name: "go-previous"
+                                enabled: newWordIndex > 0
+                                implicitWidth: Kirigami.Units.gridUnit * 3
+                                onClicked: previousNewWord()
+                                QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                QQC2.ToolTip.text: i18n("Previous")
+                                QQC2.ToolTip.visible: hovered
+                            }
+
+                            // Learn (creates card + advances).
+                            QQC2.Button {
+                                text: i18n("Learn")
+                                icon.name: "list-add"
+                                Layout.fillWidth: true
+                                highlighted: true
+                                onClicked: learnCurrentNewWord()
+                            }
+
+                            // Skip to next.
+                            QQC2.Button {
+                                text: i18n("Next")
+                                icon.name: "go-next"
+                                Layout.fillWidth: true
+                                onClicked: nextNewWord()
                             }
                         }
 
+                        // Hint (before reveal).
                         PlasmaComponents3.Label {
-                            anchors.centerIn: parent
-                            text: i18n("Nothing new to learn")
+                            text: i18n("Tap card or click Show to reveal")
+                            font.pixelSize: Math.max(6, root.fs - 3)
                             color: Kirigami.Theme.disabledTextColor
-                            font.italic: true
-                            visible: parent.count === 0
+                            Layout.alignment: Qt.AlignHCenter
+                            visible: !newWordRevealed
                         }
                     }
                 }
