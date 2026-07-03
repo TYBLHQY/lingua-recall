@@ -1,4 +1,4 @@
-// ── FSRS-6 Algorithm Engine ─────────────────────────────────
+// FSRS-6 Algorithm Engine.
 // Pure C++ implementation of the Free Spaced Repetition Scheduler v6.
 // Zero Qt/QML dependency — only <cmath> and <array>.
 //
@@ -23,7 +23,7 @@
 class FsrsEngine
 {
 public:
-    // ── Data types ─────────────────────────────────────────
+    // Data types.
 
     /// FSRS-6 model parameters (21 learned weights + scheduler settings).
     /// Default values are the optimized FSRS-6 defaults from the reference
@@ -81,12 +81,12 @@ public:
         ReviewLog log;            // immutable review log entry
     };
 
-    // ── Construction ───────────────────────────────────────
+    // Construction.
 
     FsrsEngine() = default;
     explicit FsrsEngine(const Parameters &params);
 
-    // ── Core API ───────────────────────────────────────────
+    // Core API.
 
     /// Process the first review of a new card (S == 0).
     /// Initializes stability and difficulty from the rating.
@@ -110,7 +110,7 @@ public:
     /// Compute next interval for a custom desired retention.
     double getInterval(double stability, double desired_retention) const;
 
-    // ── Parameter access ───────────────────────────────────
+    // Parameter access.
 
     const Parameters &parameters() const { return m_params; }
     void setParameters(const Parameters &params);
@@ -118,7 +118,7 @@ public:
 private:
     Parameters m_params;
 
-    // ── Internal formula helpers ───────────────────────────
+    // Internal formula helpers.
 
     /// Forgetting curve: R(t, S) = (1 + factor·t/S)^(-w[20])
     double forgettingCurve(double stability, double elapsed_days) const;
@@ -151,7 +151,7 @@ private:
     static constexpr double clampDifficulty(double d);
 };
 
-// ── Inline implementations ─────────────────────────────────
+// Inline implementations.
 
 constexpr double FsrsEngine::clampDifficulty(double d)
 {

@@ -1,4 +1,4 @@
-// ── ReviewDb Unit Tests ───────────────────────────────────
+// ReviewDb Unit Tests.
 // Uses an in-memory SQLite database (":memory:") so no external
 // file is needed. We also create a minimal `translations` table
 // to match lingua-spanner's schema, enabling JOIN query tests.
@@ -85,7 +85,7 @@ private slots:
         m_db = nullptr;
     }
 
-    // ── Schema tests ─────────────────────────────────────
+    // Schema tests.
 
     void test_ensureSchema_createsTables()
     {
@@ -119,7 +119,7 @@ private slots:
         QCOMPARE(params[QStringLiteral("w")].toArray().size(), 21);
     }
 
-    // ── Card creation ────────────────────────────────────
+    // Card creation.
 
     void test_createCard_success()
     {
@@ -146,7 +146,7 @@ private slots:
         QVERIFY(c1 != c2);
     }
 
-    // ── New cards query ──────────────────────────────────
+    // New cards query.
 
     void test_getNewCards_returnsAllWhenNoneCreated()
     {
@@ -163,7 +163,7 @@ private slots:
         QCOMPARE(cards.size(), 3); // t2, t4, t5 remain
     }
 
-    // ── Review submission ────────────────────────────────
+    // Review submission.
 
     void test_reviewCard_firstRating_good()
     {
@@ -272,7 +272,7 @@ private slots:
         QVERIFY(r.isEmpty());
     }
 
-    // ── Due cards query ──────────────────────────────────
+    // Due cards query.
 
     void test_getDueCards_includesOverdue()
     {
@@ -311,7 +311,7 @@ private slots:
         QCOMPARE(dueCards.size(), 0);
     }
 
-    // ── Card get / history ───────────────────────────────
+    // Card get / history.
 
     void test_getCard_returnsCardWithTranslations()
     {
@@ -363,7 +363,7 @@ private slots:
         QCOMPARE(history[2].toObject()[QStringLiteral("rating")].toInt(), 3);
     }
 
-    // ── Stats ────────────────────────────────────────────
+    // Stats.
 
     void test_getStats_aggregatesCorrectly()
     {
@@ -378,7 +378,7 @@ private slots:
         QCOMPARE(stats[QStringLiteral("total_reviews")].toInt(), 2);
     }
 
-    // ── FSRS parameters ──────────────────────────────────
+    // FSRS parameters.
 
     void test_saveFsrsParams_updatesEngine()
     {
@@ -400,7 +400,7 @@ private slots:
         QCOMPARE(loaded[QStringLiteral("desired_retention")].toDouble(), 0.85);
     }
 
-    // ── Direct SQL ───────────────────────────────────────
+    // Direct SQL.
 
     void test_exec_select()
     {
@@ -414,7 +414,7 @@ private slots:
                  QStringLiteral("bar"));
     }
 
-    // ── Lifecycle ────────────────────────────────────────
+    // Lifecycle.
 
     void test_init_twiceIsSafe()
     {

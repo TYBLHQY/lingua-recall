@@ -1,4 +1,4 @@
-// ── Lingua Recall — Spaced Repetition Review Panel ─────
+// Lingua Recall — Spaced Repetition Review Panel.
 // KDE Plasma 6 Plasmoid — FSRS-6 powered vocabulary review.
 //
 // License: GPL-2.0+
@@ -20,10 +20,10 @@ PlasmoidItem {
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     hideOnWindowDeactivate: !root.pinned
 
-    // ── Config ─────────────────────────────────────────────
+    // Config.
     readonly property int fontSizeBase: Plasmoid.configuration.fontSizeBase || 14
 
-    // ── State ─────────────────────────────────────────────
+    // State.
     property bool pinned: false
 
     // Tab navigation
@@ -39,10 +39,10 @@ PlasmoidItem {
     // Stats cache
     property var statsCache: ({})
 
-    // ── DB bridge ─────────────────────────────────────────
+    // DB bridge.
     property RecallHelperQml recall: RecallHelperQml {}
 
-    // ── Helpers ───────────────────────────────────────────
+    // Helpers.
     function refreshDueCards() {
         dueCards = recall.parseArray(recall.getDueCards(50))
         if (dueCards.length > 0) {
@@ -94,7 +94,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Init DB on load ──────────────────────────────────
+    // Init DB on load.
     Component.onCompleted: {
         if (recall.initReviewDb()) {
             refreshDueCards()
@@ -102,7 +102,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Compact: taskbar icon ──────────────────────────────
+    // Compact: taskbar icon.
     compactRepresentation: Kirigami.Icon {
         source: "adjustcoloreffects"
         implicitWidth: Kirigami.Units.iconSizes.small
@@ -120,7 +120,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Full: popup panel ──────────────────────────────────
+    // Full: popup panel.
     fullRepresentation: Item {
         Layout.minimumWidth: 380
         Layout.minimumHeight: 400
@@ -132,7 +132,7 @@ PlasmoidItem {
             anchors.margins: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.smallSpacing
 
-            // ══════ HEADER ══════
+            // HEADER.
             RowLayout {
                 Layout.fillWidth: true
 
@@ -155,7 +155,7 @@ PlasmoidItem {
                 }
             }
 
-            // ══════ TAB BAR ══════
+            // TAB BAR.
             RowLayout {
                 Layout.fillWidth: true
 
@@ -177,12 +177,12 @@ PlasmoidItem {
                 }
             }
 
-            // ══════ CONTENT AREA ══════
+            // CONTENT AREA.
             Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                // ── TAB 0: Review ──────────────────────────
+                // TAB 0: Review.
                 ColumnLayout {
                     visible: currentTab === 0
                     anchors.fill: parent
@@ -338,7 +338,7 @@ PlasmoidItem {
                     }
                 }
 
-                // ── TAB 1: New Words ───────────────────────
+                // TAB 1: New Words.
                 ColumnLayout {
                     visible: currentTab === 1
                     anchors.fill: parent
@@ -412,7 +412,7 @@ PlasmoidItem {
                     }
                 }
 
-                // ── TAB 2: Stats ────────────────────────────
+                // TAB 2: Stats.
                 ColumnLayout {
                     visible: currentTab === 2
                     anchors.fill: parent
@@ -500,7 +500,7 @@ PlasmoidItem {
                 }
             }
 
-            // ══════ STATUS BAR ══════
+            // STATUS BAR.
             PlasmaComponents3.Label {
                 text: {
                     var parts = []
@@ -517,7 +517,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Tooltip ─────────────────────────────────────────────
+    // Tooltip.
     toolTipMainText: i18n("Lingua Recall")
     toolTipSubText: {
         if (statsCache.due_now > 0)

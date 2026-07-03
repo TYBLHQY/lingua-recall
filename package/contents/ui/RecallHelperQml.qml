@@ -1,4 +1,4 @@
-// ── Recall Helper QML Wrapper ─────────────────────────────
+// Recall Helper QML Wrapper.
 // Bridges C++ RecallHelper + ReviewDb to QML.
 // Usage:
 //   RecallHelperQml { id: helper }
@@ -16,7 +16,7 @@ QtObject {
 
     property RecallHelper helper: RecallHelper {}
 
-    // ── Initialization ──────────────────────────────────────
+    // Initialization.
     function initReviewDb() {
         return helper.initReviewDb()
     }
@@ -27,7 +27,7 @@ QtObject {
 
     readonly property bool dbReady: helper.isReviewDbOpen()
 
-    // ── Card operations (return JSON strings) ───────────────
+    // Card operations (return JSON strings).
     function createCard(translationId) {
         return helper.createCard(translationId)
     }
@@ -56,7 +56,7 @@ QtObject {
         return helper.getStats()
     }
 
-    // ── FSRS params ─────────────────────────────────────────
+    // FSRS params.
     function loadFsrsParams() {
         return helper.loadFsrsParams()
     }
@@ -65,12 +65,12 @@ QtObject {
         return helper.saveFsrsParams(json)
     }
 
-    // ── Direct SQL ──────────────────────────────────────────
+    // Direct SQL.
     function exec(sql, params) {
         return helper.exec(sql, params || "[]")
     }
 
-    // ── JSON convenience parsers ────────────────────────────
+    // JSON convenience parsers.
     function parseArray(json) {
         return JSON.parse(json || "[]")
     }

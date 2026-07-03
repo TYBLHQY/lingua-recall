@@ -1,4 +1,4 @@
-// ── FsrsEngine Unit Tests ──────────────────────────────────
+// FsrsEngine Unit Tests.
 // Compile & run:
 //   cmake --build build -jN && ./build/tests/tst_FsrsEngine
 // Or:
@@ -58,7 +58,7 @@ private:
     }
 
 private slots:
-    // ── Initialization tests ──────────────────────────────
+    // Initialization tests.
 
     void test_constructor_defaults()
     {
@@ -108,7 +108,7 @@ private slots:
         checkNear(ms.difficulty, expD, "D₀(Easy)");
     }
 
-    // ── First review → review cycle ───────────────────────
+    // First review → review cycle.
 
     void test_firstReview_then_goodReview()
     {
@@ -160,7 +160,7 @@ private slots:
         QCOMPARE(r1.memory.difficulty, init.difficulty);
     }
 
-    // ── Same-day reviews ─────────────────────────────────
+    // Same-day reviews.
 
     void test_sameDay_goodReview()
     {
@@ -182,7 +182,7 @@ private slots:
         qDebug().noquote() << "Same-day Again:" << dumpReview(r1);
     }
 
-    // ── Retrievability ────────────────────────────────────
+    // Retrievability.
 
     void test_retrievability_decaysOverTime()
     {
@@ -215,7 +215,7 @@ private slots:
         QVERIFY(r < 0.5);
     }
 
-    // ── Interval ──────────────────────────────────────────
+    // Interval.
 
     void test_interval_equalsStabilityAt90()
     {
@@ -241,7 +241,7 @@ private slots:
         QVERIFY(I95 < I90);
     }
 
-    // ── Full simulation: progressive reviews ──────────────
+    // Full simulation: progressive reviews.
 
     void test_reviewCycle_progressive()
     {
@@ -306,7 +306,7 @@ private slots:
         QVERIFY(r3.memory.stability >= mem.stability);
     }
 
-    // ── Difficulty convergence ────────────────────────────
+    // Difficulty convergence.
 
     void test_difficulty_convergesOnRepeatedGood()
     {
@@ -327,7 +327,7 @@ private slots:
         QVERIFY(mem.difficulty >= 1.0);
     }
 
-    // ── Parameter mutation ────────────────────────────────
+    // Parameter mutation.
 
     void test_setParameters()
     {
@@ -346,7 +346,7 @@ private slots:
         checkNear(ms.stability, 1.0);
     }
 
-    // ── Random stress test ────────────────────────────────
+    // Random stress test.
 
     void test_randomReviews_stabilityNeverNegative()
     {

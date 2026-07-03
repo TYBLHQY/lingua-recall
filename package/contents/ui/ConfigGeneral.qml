@@ -11,19 +11,19 @@ import "../lib/LinguaRecallHelper"
 KCMUtils.SimpleKCM {
     id: page
 
-    // ── KConfig XT bindings ───────────────────────────────────
+    // KConfig XT bindings.
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
 
-    // ── DB bridge (for FSRS params) ───────────────────────────
+    // DB bridge (for FSRS params).
     property RecallHelperQml recall: RecallHelperQml {}
 
-    // ── FSRS params state ─────────────────────────────────────
+    // FSRS params state.
     property double desiredRetention: 0.9
     property int maxInterval: 36500
     property var wParams: []
 
-    // ── Load/save ─────────────────────────────────────────────
+    // Load/save.
     function loadSettings() {
         if (!recall.initReviewDb()) return
         var p = recall.parseObject(recall.loadFsrsParams())
@@ -49,11 +49,11 @@ KCMUtils.SimpleKCM {
 
     Component.onCompleted: loadSettings()
 
-    // ── UI ────────────────────────────────────────────────────
+    // UI.
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
 
-        // ── Display section ──────────────────────────────────
+        // Display section.
         Kirigami.Heading {
             level: 3
             text: i18n("Display")
@@ -79,7 +79,7 @@ KCMUtils.SimpleKCM {
             }
         }
 
-        // ── FSRS Scheduling section ──────────────────────────
+        // FSRS Scheduling section.
         Kirigami.Heading {
             level: 3
             text: i18n("Spaced Repetition (FSRS-6)")
@@ -135,7 +135,7 @@ KCMUtils.SimpleKCM {
             Item { width: Kirigami.Units.gridUnit * 2 } // spacer
         }
 
-        // ── Info ──────────────────────────────────────────────
+        // Info.
         PlasmaComponents3.Label {
             text: i18n("Higher retention = more frequent reviews. "
                        + "Lower retention = less frequent, but higher risk of forgetting. "
@@ -148,7 +148,7 @@ KCMUtils.SimpleKCM {
 
         Item { Layout.fillHeight: true }
 
-        // ── About ─────────────────────────────────────────────
+        // About.
         Kirigami.Heading {
             level: 3
             text: i18n("About")

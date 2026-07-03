@@ -1,4 +1,4 @@
-// ── FSRS-6 Algorithm Engine: Implementation ────────────────
+// FSRS-6 Algorithm Engine: Implementation.
 // All formulas verified against:
 //   https://github.com/open-spaced-repetition/awesome-fsrs/wiki/The-Algorithm
 //   github.com/open-spaced-repetition/fsrs-rs/src/model.rs
@@ -12,7 +12,7 @@
 #include <cstring>
 #include <limits>
 
-// ── Construction ───────────────────────────────────────────
+// Construction.
 
 FsrsEngine::FsrsEngine(const Parameters &params)
     : m_params(params)
@@ -24,7 +24,7 @@ void FsrsEngine::setParameters(const Parameters &params)
     m_params = params;
 }
 
-// ── Core API ───────────────────────────────────────────────
+// Core API.
 
 FsrsEngine::MemoryState FsrsEngine::initMemory(int rating) const
 {
@@ -106,7 +106,7 @@ double FsrsEngine::getInterval(double stability,
     return interval;
 }
 
-// ── Internal formula helpers ───────────────────────────────
+// Internal formula helpers.
 
 double FsrsEngine::forgettingCurve(double stability, double elapsed_days) const
 {

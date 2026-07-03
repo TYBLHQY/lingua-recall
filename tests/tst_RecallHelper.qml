@@ -1,4 +1,4 @@
-// ── RecallHelper QML Integration Tests ───────────────────
+// RecallHelper QML Integration Tests.
 // Run: qml6 -platform offscreen -I ../package/contents/lib tst_RecallHelper.qml
 // These tests verify the C++ plugin loads and the API surface
 // is present. They self-terminate via Qt.quit().
@@ -15,12 +15,12 @@ import LinguaRecallHelper 0.1
 Item {
     id: root
 
-    // ── Pre-created instances for tests ──────────────────
+    // Pre-created instances for tests.
     // (QML can't create types inside JS; we must do it here)
     readonly property var rh1: RecallHelper {}
     readonly property var rh2: RecallHelper {}
 
-    // ── Tests (each is a function reference) ──────────────
+    // Tests (each is a function reference).
     readonly property var tests: [
         function test_hello() {
             var h = root.rh1.hello()

@@ -1,4 +1,4 @@
-// ── Recall Helper: Implementation ──────────────────────────
+// Recall Helper: Implementation.
 // License: GPL-2.0+
 
 #include "RecallHelper.h"
@@ -19,7 +19,7 @@ QString RecallHelper::hello()
     return QStringLiteral("Lingua Recall helper ready.");
 }
 
-// ── Review database lifecycle ─────────────────────────────
+// Review database lifecycle.
 
 bool RecallHelper::initReviewDb()
 {
@@ -54,7 +54,7 @@ bool RecallHelper::isReviewDbOpen() const
     return m_db && m_db->isOpen();
 }
 
-// ── Card operations ───────────────────────────────────────
+// Card operations.
 
 QString RecallHelper::createCard(const QString &translationId)
 {
@@ -91,7 +91,7 @@ QString RecallHelper::getStats()
     return m_db ? m_db->getStats() : QStringLiteral("{}");
 }
 
-// ── FSRS parameters ───────────────────────────────────────
+// FSRS parameters.
 
 QString RecallHelper::loadFsrsParams()
 {
@@ -103,7 +103,7 @@ bool RecallHelper::saveFsrsParams(const QString &json)
     return m_db && m_db->saveFsrsParams(json);
 }
 
-// ── Direct SQL ─────────────────────────────────────────────
+// Direct SQL.
 
 QString RecallHelper::exec(const QString &sql, const QString &jsonParams)
 {

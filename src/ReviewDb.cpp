@@ -1,4 +1,4 @@
-// ── Review Database: Implementation ───────────────────────
+// Review Database: Implementation.
 // License: GPL-2.0+
 
 #include "ReviewDb.h"
@@ -15,7 +15,7 @@
 #include <QStandardPaths>
 #include <QUuid>
 
-// ── Construction / Destruction ─────────────────────────────
+// Construction / Destruction.
 
 ReviewDb::ReviewDb(QObject *parent)
     : QObject(parent)
@@ -27,7 +27,7 @@ ReviewDb::~ReviewDb()
     close();
 }
 
-// ── Lifecycle ──────────────────────────────────────────────
+// Lifecycle.
 
 QString ReviewDb::defaultDbPath() const
 {
@@ -103,7 +103,7 @@ bool ReviewDb::isOpen() const
     return db.isValid() && db.isOpen();
 }
 
-// ── Schema ─────────────────────────────────────────────────
+// Schema.
 
 bool ReviewDb::ensureSchema()
 {
@@ -113,7 +113,7 @@ bool ReviewDb::ensureSchema()
 
     QSqlQuery q(db);
 
-    // ── review_cards ───────────────────────────────────────
+    // review_cards.
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS review_cards ("
         "  id                TEXT    PRIMARY KEY,"
@@ -149,7 +149,7 @@ bool ReviewDb::ensureSchema()
         "CREATE INDEX IF NOT EXISTS idx_review_cards_state "
         "ON review_cards(state)"));
 
-    // ── review_log ─────────────────────────────────────────
+    // review_log.
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS review_log ("
         "  id                    TEXT    PRIMARY KEY,"
@@ -180,7 +180,7 @@ bool ReviewDb::ensureSchema()
         "CREATE INDEX IF NOT EXISTS idx_review_log_reviewed_at "
         "ON review_log(reviewed_at)"));
 
-    // ── fsrs_params (singleton row) ────────────────────────
+    // fsrs_params (singleton row).
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS fsrs_params ("
         "  id                INTEGER PRIMARY KEY CHECK(id = 1),"
@@ -220,7 +220,7 @@ void ReviewDb::migrateSchema()
     //   2. ALTER TABLE ADD COLUMN if missing
 }
 
-// ── FSRS parameters ───────────────────────────────────────
+// FSRS parameters.
 
 void ReviewDb::loadEngineParams()
 {
@@ -329,7 +329,7 @@ bool ReviewDb::saveFsrsParams(const QString &json)
     return true;
 }
 
-// ── Card creation ──────────────────────────────────────────
+// Card creation.
 
 QString ReviewDb::createCard(const QString &translationId)
 {
@@ -362,7 +362,7 @@ QString ReviewDb::createCard(const QString &translationId)
     return cardId;
 }
 
-// ── Review submission ──────────────────────────────────────
+// Review submission.
 
 QString ReviewDb::reviewCard(const QString &cardId, int rating)
 {
@@ -375,7 +375,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
     if (!db.isValid())
         return {};
 
-    // ── 1. Load current card state ─────────────────────────
+    // 1. Load current card state.
     QSqlQuery q(db);
     q.prepare(QStringLiteral(
         "SELECT stability, difficulty, state, reps, lapses, "
@@ -395,7 +395,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
     int reps = q.value(3).toInt();
     int lapses = q.value(4).toInt();
 
-    // ── 2. Calculate elapsed days ──────────────────────────
+    // 2. Calculate elapsed days.
     double elapsed_days = 0.0;
     QDateTime lastReviewAt;
     if (!q.value(5).isNull()) {
@@ -408,7 +408,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
 
     int scheduled_days = q.value(6).toInt();
 
-    // ── 3. Run FSRS algorithm ──────────────────────────────
+    // 3. Run FSRS algorithm.
     bool isFirstReview = (current.stability <= 0.0);
 
     FsrsEngine::ReviewResult result;
@@ -425,11 +425,11 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
         result = m_engine.review(current, rating, elapsed_days);
     }
 
-    // ── 4. Update counters ─────────────────────────────────
+    // 4. Update counters.
     int newReps = reps + (rating >= 2 ? 1 : 0); // Hard/Good/Easy = success
     int newLapses = lapses + (rating == 1 ? 1 : 0); // Again = lapse
 
-    // ── 5. Determine new state ─────────────────────────────
+    // 5. Determine new state.
     QString newState = stateStr;
     if (isFirstReview) {
         newState = QStringLiteral("learning");
@@ -442,7 +442,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
         newState = QStringLiteral("review");
     }
 
-    // ── 6. Update the card ─────────────────────────────────
+    // 6. Update the card.
     QString nextDue = QDateTime::currentDateTimeUtc()
                           .addDays(static_cast<int>(
                               std::ceil(result.log.scheduled_days)))
@@ -474,7 +474,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
         return {};
     }
 
-    // ── 7. Insert review_log entry ─────────────────────────
+    // 7. Insert review_log entry.
     const QString logId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
     QSqlQuery log(db);
@@ -506,7 +506,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
         return {};
     }
 
-    // ── 8. Return result as JSON ───────────────────────────
+    // 8. Return result as JSON.
     QJsonObject out;
     out[QStringLiteral("card_id")] = cardId;
     out[QStringLiteral("state")] = newState;
@@ -524,7 +524,7 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
         QJsonDocument(out).toJson(QJsonDocument::Compact));
 }
 
-// ── Queries ────────────────────────────────────────────────
+// Queries.
 
 QString ReviewDb::getDueCards(int limit)
 {
@@ -730,7 +730,7 @@ QString ReviewDb::getStats()
         QJsonDocument(stats).toJson(QJsonDocument::Compact));
 }
 
-// ── Direct SQL ─────────────────────────────────────────────
+// Direct SQL.
 
 QString ReviewDb::exec(const QString &sql, const QString &jsonParams)
 {
