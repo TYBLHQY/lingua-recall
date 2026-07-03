@@ -14,6 +14,8 @@ KCMUtils.SimpleKCM {
     // KConfig XT bindings.
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
+    property alias cfg_fontFamily: fontFamilyField.text
+    property string cfg_fontFamilyDefault: ""
 
     // DB bridge (for FSRS params).
     property RecallHelperQml recall: RecallHelperQml {}
@@ -76,6 +78,15 @@ KCMUtils.SimpleKCM {
                 stepSize: 1
                 editable: true
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+            }
+
+            PlasmaComponents3.Label {
+                text: i18n("Font Family:")
+            }
+            QQC2.TextField {
+                id: fontFamilyField
+                placeholderText: i18n("System default")
+                Layout.fillWidth: true
             }
         }
 

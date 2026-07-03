@@ -9,5 +9,8 @@
     <entry name="fontSizeBase" type="Int">
       <default>14</default>
     </entry>
+    <entry name="fontFamily" type="String">
+      <default></default>
+    </entry>
   </group>
 </kcfg>
