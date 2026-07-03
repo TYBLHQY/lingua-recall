@@ -566,6 +566,19 @@ QString ReviewDb::getDueCards(int limit)
         row[QStringLiteral("source_lang")] = q.value(15).toString();
         row[QStringLiteral("target_lang")] = q.value(16).toString();
         row[QStringLiteral("result_json")] = q.value(17).toString();
+
+        // Compute current retrievability from stability and elapsed time
+        double stability = q.value(2).toDouble();
+        double elapsed_days = 0.0;
+        if (!q.value(6).isNull()) {
+            elapsed_days = QDateTime::fromString(
+                q.value(6).toString(), Qt::ISODate)
+                .secsTo(QDateTime::currentDateTimeUtc()) / 86400.0;
+            if (elapsed_days < 0.0) elapsed_days = 0.0;
+        }
+        row[QStringLiteral("retrievability")] =
+            m_engine.getRetrievability(stability, elapsed_days);
+
         rows.append(row);
     }
 
@@ -579,7 +592,7 @@ QString ReviewDb::getNewCards(int limit)
     QSqlQuery q(db);
     q.prepare(QStringLiteral(
         "SELECT t.id, t.input_text, t.cleaned_input, "
-        "       t.source_lang, t.target_lang, t.created_at "
+        "       t.source_lang, t.target_lang, t.result_json, t.created_at "
         "FROM translations t "
         "LEFT JOIN review_cards rc ON rc.translation_id = t.id "
         "WHERE rc.id IS NULL "
@@ -597,7 +610,8 @@ QString ReviewDb::getNewCards(int limit)
         row[QStringLiteral("cleaned_input")] = q.value(2).toString();
         row[QStringLiteral("source_lang")] = q.value(3).toString();
         row[QStringLiteral("target_lang")] = q.value(4).toString();
-        row[QStringLiteral("created_at")] = q.value(5).toString();
+        row[QStringLiteral("result_json")] = q.value(5).toString();
+        row[QStringLiteral("created_at")] = q.value(6).toString();
         rows.append(row);
     }
 
@@ -725,6 +739,37 @@ QString ReviewDb::getStats()
         "WHERE rc.id IS NULL"));
     if (q.next())
         stats[QStringLiteral("new_available")] = q.value(0).toInt();
+
+    // Total cards
+    q.exec(QStringLiteral("SELECT COUNT(*) FROM review_cards"));
+    if (q.next())
+        stats[QStringLiteral("total_cards")] = q.value(0).toInt();
+
+    // Average stability and difficulty of active cards
+    q.exec(QStringLiteral(
+        "SELECT AVG(stability), AVG(difficulty) "
+        "FROM review_cards "
+        "WHERE state IN ('learning','review','relearning') "
+        "  AND stability > 0.0"));
+    if (q.next()) {
+        stats[QStringLiteral("avg_stability")] = q.value(0).toDouble();
+        stats[QStringLiteral("avg_difficulty")] = q.value(1).toDouble();
+    }
+
+    // Reviews completed today
+    q.exec(QStringLiteral(
+        "SELECT COUNT(*) FROM review_log "
+        "WHERE reviewed_at >= date('now')"));
+    if (q.next())
+        stats[QStringLiteral("reviews_today")] = q.value(0).toInt();
+
+    // Cards due within the next 7 days (including already due)
+    q.exec(QStringLiteral(
+        "SELECT COUNT(*) FROM review_cards "
+        "WHERE due <= datetime('now', '+7 days') "
+        "  AND state IN ('learning','review','relearning')"));
+    if (q.next())
+        stats[QStringLiteral("due_this_week")] = q.value(0).toInt();
 
     return QString::fromUtf8(
         QJsonDocument(stats).toJson(QJsonDocument::Compact));
