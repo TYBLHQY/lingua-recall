@@ -36,6 +36,12 @@ PlasmoidItem {
     // State.
     property bool pinned: false
 
+    // Toggle pin with Ctrl+P.
+    Shortcut {
+        sequence: "Ctrl+P"
+        onActivated: root.pinned = !root.pinned
+    }
+
     // Merged card queue: new words first, then due cards.
     property var currentCard: null
     property var cardQueue: []

@@ -124,7 +124,7 @@ private slots:
         // Difficulty should stay roughly same (G=3 → ΔD≈0)
         checkNear(r1.memory.difficulty, init.difficulty, "D after Good/Good");
         QVERIFY(r1.log.retrievability > 0 && r1.log.retrievability < 1);
-        QVERIFY(r1.log.scheduled_days >= 1);
+        QVERIFY(r1.log.scheduled_days >= 0.5);
     }
 
     void test_firstReview_then_hardReview()
@@ -362,7 +362,7 @@ private slots:
             QVERIFY(r.memory.difficulty >= 1.0);
             QVERIFY(r.memory.difficulty <= 10.0);
             QVERIFY(r.log.retrievability >= 0.0 || r.log.elapsed_days > 0.0);
-            QVERIFY(r.log.scheduled_days >= 1.0);
+            QVERIFY(r.log.scheduled_days >= 0.5);
 
             mem = r.memory;
             delay = r.log.scheduled_days;

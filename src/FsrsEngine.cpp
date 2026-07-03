@@ -99,8 +99,8 @@ double FsrsEngine::getInterval(double stability,
     double interval = stability / factor
                       * (std::pow(desired_retention, 1.0 / decay) - 1.0);
 
-    // Clamp to [1, max_interval]
-    interval = std::max(1.0, std::min(interval,
+    // Clamp to [0.5, max_interval]
+    interval = std::max(0.5, std::min(interval,
                         static_cast<double>(m_params.max_interval)));
 
     return interval;

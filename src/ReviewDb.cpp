@@ -444,8 +444,8 @@ QString ReviewDb::reviewCard(const QString &cardId, int rating)
 
     // 6. Update the card.
     QString nextDue = QDateTime::currentDateTimeUtc()
-                          .addDays(static_cast<int>(
-                              std::ceil(result.log.scheduled_days)))
+                          .addMSecs(static_cast<qint64>(
+                              result.log.scheduled_days * 86400.0 * 1000.0))
                           .toString(Qt::ISODate);
 
     QSqlQuery up(db);

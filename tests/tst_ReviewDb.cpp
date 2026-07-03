@@ -178,7 +178,7 @@ private slots:
         QCOMPARE(obj[QStringLiteral("state")].toString(),
                  QStringLiteral("learning"));
         QVERIFY(obj[QStringLiteral("stability")].toDouble() > 0);
-        QVERIFY(obj[QStringLiteral("scheduled_days")].toDouble() >= 1);
+        QVERIFY(obj[QStringLiteral("scheduled_days")].toDouble() >= 0.5);
 
         // Should have created a review_log entry
         auto history = parseArray(m_db->getCardHistory(cid));
