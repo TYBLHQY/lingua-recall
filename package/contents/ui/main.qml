@@ -307,6 +307,11 @@ PlasmoidItem {
 
         // Keyboard shortcuts.
         Keys.onPressed: function (event) {
+            // Prevent Tab from stealing focus to buttons.
+            if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                event.accepted = true
+                return
+            }
             if (answerRevealed && currentCard) {
                 switch (event.key) {
                 case Qt.Key_1: rateCurrentCard(1); event.accepted = true; break
@@ -367,6 +372,7 @@ PlasmoidItem {
                     icon.name: root.pinned ? "window-pin" : "window-unpin"
                     implicitWidth: Kirigami.Units.iconSizes.medium
                     implicitHeight: Kirigami.Units.iconSizes.medium
+                    focusPolicy: Qt.NoFocus
                     onClicked: root.pinned = !root.pinned
                     Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
                     QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
@@ -403,24 +409,28 @@ PlasmoidItem {
                             text: i18n("1  Again")
                             icon.name: "edit-delete"
                             Layout.fillWidth: true
+                            focusPolicy: Qt.NoFocus
                             onClicked: rateCurrentCard(1)
                         }
                         QQC2.Button {
                             text: i18n("2  Hard")
                             icon.name: "arrow-down"
                             Layout.fillWidth: true
+                            focusPolicy: Qt.NoFocus
                             onClicked: rateCurrentCard(2)
                         }
                         QQC2.Button {
                             text: i18n("3  Good")
                             icon.name: "arrow-right"
                             Layout.fillWidth: true
+                            focusPolicy: Qt.NoFocus
                             onClicked: rateCurrentCard(3)
                         }
                         QQC2.Button {
                             text: i18n("4  Easy")
                             icon.name: "arrow-up"
                             Layout.fillWidth: true
+                            focusPolicy: Qt.NoFocus
                             onClicked: rateCurrentCard(4)
                         }
                     }
