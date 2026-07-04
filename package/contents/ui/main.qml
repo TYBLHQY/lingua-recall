@@ -50,9 +50,27 @@ PlasmoidItem {
 
     // Stats cache.
     property var statsCache: ({})
+    property bool hasDueContent: false
 
     // DB bridge.
     property RecallHelperQml recall: RecallHelperQml {}
+
+    // Background status poll — periodically check for due content.
+    Timer {
+        id: pollTimer
+        interval: 30000  // 30 seconds
+        repeat: true
+        running: true
+        onTriggered: refreshStats()
+    }
+
+    onStatsCacheChanged: {
+        hasDueContent = (statsCache.due_now || 0) > 0 || (statsCache.new_available || 0) > 0
+    }
+
+    Plasmoid.status: hasDueContent
+        ? PlasmaCore.Types.NeedsAttentionStatus
+        : PlasmaCore.Types.PassiveStatus
 
     // Extraction helpers — AI result_json is flat {translate, words, ...}.
 
@@ -239,11 +257,36 @@ PlasmoidItem {
             refreshMergedCards()
     }
 
-    // Compact: taskbar icon.
-    compactRepresentation: Kirigami.Icon {
-        source: "dialog-ok"
+    // Compact: taskbar icon with due-card blinking indicator.
+    compactRepresentation: Item {
         implicitWidth: Kirigami.Units.iconSizes.small
         implicitHeight: Kirigami.Units.iconSizes.small
+
+        Kirigami.Icon {
+            source: "dialog-ok"
+            anchors.fill: parent
+        }
+
+        // Blinking dot — visible when cards are due or new words available.
+        Rectangle {
+            id: indicatorDot
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.topMargin: 1
+            anchors.rightMargin: 1
+            width: 6
+            height: 6
+            radius: 3
+            color: Kirigami.Theme.negativeTextColor
+            visible: root.hasDueContent
+
+            SequentialAnimation on opacity {
+                running: root.hasDueContent
+                loops: Animation.Infinite
+                NumberAnimation { from: 1.0; to: 0.15; duration: 700; easing.type: Easing.InOutQuad }
+                NumberAnimation { from: 0.15; to: 1.0; duration: 700; easing.type: Easing.InOutQuad }
+            }
+        }
 
         MouseArea {
             anchors.fill: parent
