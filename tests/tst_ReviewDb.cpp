@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include <QSqlQuery>
 #include <QSqlDatabase>
+#include <QSqlError>
 
 #include "ReviewDb.h"
 
@@ -412,6 +413,60 @@ private slots:
         QCOMPARE(result.size(), 5);
         QCOMPARE(result[0].toObject()[QStringLiteral("input_text")].toString(),
                  QStringLiteral("bar"));
+    }
+
+    // Referential integrity.
+
+    void test_translationDelete_cascadesToReviewCards()
+    {
+        // Create a card + review for translation t1
+        QString cid = m_db->createCard(QStringLiteral("t1"));
+        QVERIFY(!cid.isEmpty());
+        m_db->reviewCard(cid, 3); // log entry
+
+        auto cardsBefore = parseArray(m_db->getDueCards(50));
+        int dueBefore = 0;
+        for (const auto &c : cardsBefore)
+            if (c.toObject()[QStringLiteral("id")].toString() == cid)
+                dueBefore++;
+
+        // Delete the translation from translations (simulating lingua-spanner cleanup)
+        QSqlDatabase db = QSqlDatabase::database(
+            QStringLiteral("reviewdb_%1").arg(
+                reinterpret_cast<quintptr>(m_db), 0, 16), false);
+        QSqlQuery q(db);
+        q.prepare(QStringLiteral("DELETE FROM translations WHERE id = ?"));
+        q.bindValue(0, QStringLiteral("t1"));
+        QVERIFY2(q.exec(), qPrintable(q.lastError().text()));
+        QVERIFY2(q.numRowsAffected() == 1,
+                 qPrintable(QStringLiteral("expected 1 deleted, got %1")
+                     .arg(q.numRowsAffected())));
+
+        // The card should no longer exist via any query path
+        // 1. getDueCards should not return it
+        auto dueAfter = parseArray(m_db->getDueCards(50));
+        for (const auto &c : dueAfter)
+            QVERIFY2(c.toObject()[QStringLiteral("id")].toString() != cid,
+                     "deleted translation's card still appears in getDueCards()");
+
+        // 2. getCard should return empty
+        auto card = m_db->getCard(cid);
+        QVERIFY2(card.isEmpty(),
+                 "orphaned card still accessible via getCard()");
+
+        // 3. getStats should not count the orphaned card
+        auto stats = parseObj(m_db->getStats());
+        QCOMPARE(stats[QStringLiteral("total_cards")].toInt(), 0);
+        QCOMPARE(stats[QStringLiteral("new_available")].toInt(), 4); // t2-t5 remain
+    }
+
+    void test_createCard_failsForNonexistentTranslation()
+    {
+        // With the REFERENCES constraint active, creating a card for a
+        // non-existent translation should fail
+        QString cid = m_db->createCard(QStringLiteral("no-such-id"));
+        QVERIFY2(cid.isEmpty(),
+                 "createCard should fail for a non-existent translation");
     }
 
     // Lifecycle.

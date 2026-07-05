@@ -94,12 +94,21 @@ PlasmoidItem {
         return ""
     }
 
-    /// Example sentences (array of strings).
+    /// Example sentences — array of {sentence, translation}.
     function extractExamples(resultJson) {
         if (!resultJson) return []
         try {
             var j = JSON.parse(resultJson)
-            if (j.examples && Array.isArray(j.examples)) return j.examples
+            if (j.examples && Array.isArray(j.examples)) {
+                // New format: [{sentence, translation}]
+                if (j.examples.length > 0 && typeof j.examples[0] === "object")
+                    return j.examples
+                // Legacy format: [string, string, ...]
+                var mapped = []
+                for (var i = 0; i < j.examples.length; i++)
+                    mapped.push({sentence: j.examples[i], translation: ""})
+                return mapped
+            }
         } catch(e) {}
         return []
     }
@@ -751,22 +760,50 @@ PlasmoidItem {
 
                             // --- Example sentences ---
                             ColumnLayout {
+                                visible: root.extractExamples(
+                                             currentCard.result_json).length > 0
                                 Layout.fillWidth: true
                                 Layout.topMargin: Kirigami.Units.smallSpacing
-                                spacing: Kirigami.Units.smallSpacing
+
+                                PlasmaComponents3.Label {
+                                    text: i18n("Examples")
+                                    font.bold: true
+                                    font.pixelSize: root.fontSizeSmall
+                                    font.family: root.fontFamily || undefined
+                                    color: Kirigami.Theme.neutralTextColor
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.bottomMargin: Kirigami.Units.smallSpacing
+                                }
 
                                 Repeater {
                                     model: root.extractExamples(
                                         currentCard.result_json)
 
-                                    delegate: PlasmaComponents3.Label {
-                                        text: "• " + modelData
-                                        font.pixelSize: root.fontSizeSmall
-                                        font.family: root.fontFamily || undefined
-                                        font.italic: true
-                                        color: Kirigami.Theme.disabledTextColor
-                                        wrapMode: Text.WordWrap
+                                    delegate: ColumnLayout {
+                                        spacing: 0
                                         Layout.fillWidth: true
+
+                                        Text {
+                                            text: modelData.sentence
+                                            font.italic: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            font.family: root.fontFamily || undefined
+                                            color: Kirigami.Theme.textColor
+                                            textFormat: Text.PlainText
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+
+                                        Text {
+                                            text: modelData.translation
+                                            font.pixelSize: root.fontSizeSmall
+                                            font.family: root.fontFamily || undefined
+                                            color: Kirigami.Theme.disabledTextColor
+                                            textFormat: Text.PlainText
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                            Layout.bottomMargin: Kirigami.Units.smallSpacing
+                                        }
                                     }
                                 }
                             }

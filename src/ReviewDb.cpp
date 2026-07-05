@@ -117,7 +117,8 @@ bool ReviewDb::ensureSchema()
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS review_cards ("
         "  id                TEXT    PRIMARY KEY,"
-        "  translation_id    TEXT    NOT NULL UNIQUE,"
+        "  translation_id    TEXT    NOT NULL UNIQUE"
+        "                     REFERENCES translations(id) ON DELETE CASCADE,"
         "  stability         REAL   NOT NULL DEFAULT 0.0,"
         "  difficulty        REAL   NOT NULL DEFAULT 0.0,"
         "  state             TEXT   NOT NULL DEFAULT 'new'"
@@ -214,10 +215,49 @@ bool ReviewDb::ensureSchema()
 
 void ReviewDb::migrateSchema()
 {
-    // Future migrations go here.
-    // Pattern:
-    //   1. PRAGMA table_info(table) to check column existence
-    //   2. ALTER TABLE ADD COLUMN if missing
+    QSqlDatabase db = QSqlDatabase::database(m_connectionName, false);
+    if (!db.isValid())
+        return;
+
+    QSqlQuery q(db);
+
+    // Check if translations table exists before running migrations
+    // that depend on it (it's owned by lingua-spanner, may not exist yet
+    // on first run or in tests).
+    q.exec(QStringLiteral(
+        "SELECT name FROM sqlite_master "
+        "WHERE type='table' AND name='translations'"));
+    if (!q.next())
+        return; // translations table doesn't exist yet, nothing to migrate
+
+    // Migration: Add foreign-key cascade from review_cards to translations.
+    //
+    // SQLite doesn't support ALTER TABLE ADD CONSTRAINT, so for databases
+    // created before the REFERENCES clause was added to the CREATE TABLE,
+    // we use an AFTER DELETE trigger on translations to cascade deletes
+    // to review_cards (which then cascades to review_log via its existing FK).
+    q.exec(QStringLiteral(
+        "CREATE TRIGGER IF NOT EXISTS trg_review_cards_cleanup "
+        "AFTER DELETE ON translations "
+        "FOR EACH ROW "
+        "BEGIN "
+        "  DELETE FROM review_cards WHERE translation_id = OLD.id; "
+        "END"
+    ));
+    if (q.lastError().isValid()) {
+        qWarning("ReviewDb: migrateSchema: create trigger: %s",
+                 qPrintable(q.lastError().text()));
+    }
+
+    // Clean up any orphaned rows that may exist from before this migration.
+    q.exec(QStringLiteral(
+        "DELETE FROM review_cards "
+        "WHERE translation_id NOT IN (SELECT id FROM translations)"
+    ));
+    if (q.lastError().isValid()) {
+        qWarning("ReviewDb: migrateSchema: clean orphans: %s",
+                 qPrintable(q.lastError().text()));
+    }
 }
 
 // FSRS parameters.
