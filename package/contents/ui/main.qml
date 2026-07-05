@@ -1127,6 +1127,15 @@ PlasmoidItem {
                         Layout.alignment: Qt.AlignHCenter
                     }
 
+                    PlasmaComponents3.Label {
+                        visible: currentCard !== null && !answerRevealed
+                        text: i18n("Press A to read aloud")
+                        font.pixelSize: root.fontSizeSmall
+                        font.family: root.fontFamily || undefined
+                        color: Kirigami.Theme.disabledTextColor
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
                     // Empty state.
                     ColumnLayout {
                         visible: currentCard === null
