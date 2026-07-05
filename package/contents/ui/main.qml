@@ -25,8 +25,16 @@ PlasmoidItem {
 
     // Refresh on expand (covers keyboard shortcut and any non-click open).
     onExpandedChanged: {
-        if (expanded)
-            refreshMergedCards()
+        if (!expanded) {
+            // When pinned and panel content not focused: refocus instead of close.
+            // Lets the user bring panel to front via shortcut without closing it.
+            if (root.pinned && !panelRoot.activeFocus) {
+                root.expanded = true
+                return
+            }
+            return
+        }
+        refreshMergedCards()
     }
 
     // Config.
