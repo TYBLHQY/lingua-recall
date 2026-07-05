@@ -23,6 +23,11 @@ QtObject {
     property string _text: ""
     property bool _connected: false
 
+    property Timer _timeoutTimer: Timer {
+        interval: 40000
+        onTriggered: root._onTimeout()
+    }
+
     function synthesize(text) {
         if (!text || text.trim().length === 0) {
             root.error(qsTr("No text to synthesize"))
@@ -31,6 +36,7 @@ QtObject {
         root._ensureConnected()
         root._text = text.trim()
         root._tempFilePath = root.helper.cacheFilePath("tts", ".mp3")
+        root._timeoutTimer.start()
         root.helper.runCommand("edge-tts", [
             "--text", root._text,
             "--voice", root.voice,
@@ -43,6 +49,7 @@ QtObject {
 
     function cancel() {
         root.helper.cancelCommand()
+        root._timeoutTimer.stop()
     }
 
     function _ensureConnected() {
@@ -53,6 +60,7 @@ QtObject {
     }
 
     function _onFinished(exitCode, stdOut, stdErr) {
+        root._timeoutTimer.stop()
         if (exitCode === 0) {
             root.finished(root._tempFilePath)
         } else {
@@ -68,6 +76,12 @@ QtObject {
     }
 
     function _onError(errorMessage) {
+        root._timeoutTimer.stop()
         root.error(errorMessage)
+    }
+
+    function _onTimeout() {
+        root.helper.cancelCommand()
+        root.error(qsTr("Edge-TTS timed out (40s)"))
     }
 }
