@@ -25,17 +25,25 @@ PlasmoidItem {
 
     // Refresh on expand (covers keyboard shortcut and any non-click open).
     onExpandedChanged: {
+        console.log("onExpandedChanged: expanded=", root.expanded, " pinned=", root.pinned)
         if (!expanded) {
-            // Shortcut-triggered close while pinned and panel not focused: refocus instead.
-            if (!root._openedByClick && root.pinned && panelRoot && !panelRoot.activeFocus) {
-                root._openedByClick = true  // click path so handlePanelOpened just refreshes
+            // Shortcut-triggered close while panel has no focus: refocus instead of close.
+            // This lets the user bring the panel to front via shortcut without closing it.
+            if (!root._openedByClick && root.pinned && root._focusTarget && !root._focusTarget.activeFocus) {
+                console.log("shortcut close while unfocused — refocusing")
+                root._openedByClick = true
                 root.expanded = true
                 return
             }
+            // Normal close
             root._openedByClick = false
             return
         }
         root._openedByClick = false
+        Qt.callLater(function() {
+            if (root._focusTarget)
+                root._focusTarget.forceActiveFocus()
+        })
         refreshMergedCards()
     }
 
@@ -54,6 +62,7 @@ PlasmoidItem {
     // State.
     property bool pinned: false
     property bool _openedByClick: false
+    property QtObject _focusTarget: null
 
     // Toggle pin with Ctrl+P.
     Shortcut {
@@ -420,6 +429,7 @@ PlasmoidItem {
         id: panelRoot
         focus: true
         clip: true
+        Component.onCompleted: root._focusTarget = panelRoot
 
         Layout.minimumWidth: 380
         Layout.minimumHeight: 400
