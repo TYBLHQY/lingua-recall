@@ -26,14 +26,16 @@ PlasmoidItem {
     // Refresh on expand (covers keyboard shortcut and any non-click open).
     onExpandedChanged: {
         if (!expanded) {
-            // When pinned and panel content not focused: refocus instead of close.
-            // Lets the user bring panel to front via shortcut without closing it.
-            if (root.pinned && !panelRoot.activeFocus) {
+            // Shortcut-triggered close while pinned and panel not focused: refocus instead.
+            if (!root._openedByClick && root.pinned && panelRoot && !panelRoot.activeFocus) {
+                root._openedByClick = true  // click path so handlePanelOpened just refreshes
                 root.expanded = true
                 return
             }
+            root._openedByClick = false
             return
         }
+        root._openedByClick = false
         refreshMergedCards()
     }
 
@@ -51,6 +53,7 @@ PlasmoidItem {
 
     // State.
     property bool pinned: false
+    property bool _openedByClick: false
 
     // Toggle pin with Ctrl+P.
     Shortcut {
@@ -405,7 +408,10 @@ PlasmoidItem {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: root.expanded = !root.expanded
+            onClicked: {
+                root._openedByClick = true
+                root.expanded = !root.expanded
+            }
         }
     }
 
