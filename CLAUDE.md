@@ -40,6 +40,14 @@ SQLite CRUD layer managing three tables in `linguaspanner.db`:
 ### RecallHelper (`src/RecallHelper.h/.cpp`)
 QML_ELEMENT façade exposing all card/review/param operations as Q_INVOKABLE methods. QML wrapper at `package/contents/ui/RecallHelperQml.qml`.
 
+Also provides QProcess-based async command execution (used by TTS):
+- `runCommand(cmd, args)` — async process via QProcess
+- `cancelCommand()` — kill running process
+- `fileExists(path)` — check file existence
+- `cleanTtsCache(dir, maxFiles)` — LRU eviction of cached audio
+- `cacheDir(subdir)` — create/return a cache subdirectory
+- Signals: `commandFinished(exitCode, stdout, stderr)`, `commandError(message)`
+
 ### QML UI (`package/contents/ui/main.qml`)
 Single-view panel (merged card queue — new words first, then due review cards):
 - **Card display** — tap/Space to reveal answer, then rate with Again/Hard/Good/Easy
@@ -70,7 +78,10 @@ lingua-recall/
 │       └── ui/
 │           ├── main.qml
 │           ├── ConfigGeneral.qml    # Font size + FSRS desired retention
-│           └── RecallHelperQml.qml
+│           ├── TtsConfigCategory.qml # Per-language voice + rate/volume/pitch
+│           ├── RecallHelperQml.qml
+│           └── services/
+│               └── EdgeTtsService.qml  # Text-to-speech via edge-tts CLI
 ├── tests/
 │   ├── tst_FsrsEngine.cpp     # 23 algorithm unit tests (QTest)
 │   ├── tst_ReviewDb.cpp       # 23 integration tests (in-memory SQLite)
@@ -110,6 +121,7 @@ make qml-check       # 5 QML integration tests (requires build first)
 | `2` | Rate Hard |
 | `3` | Rate Good |
 | `4` | Rate Easy |
+| `A` | Read card aloud via TTS |
 | `Ctrl+P` | Toggle pin (keep panel open) |
 
 ### Configuration
@@ -117,6 +129,9 @@ make qml-check       # 5 QML integration tests (requires build first)
 KConfig XT entries (via `package/contents/config/main.xml`):
 - `fontSizeBase` — base font size in px (default: 14)
 - `fontFamily` — font family override (empty → system default)
+- `edgeTtsVoiceZh`, `edgeTtsVoiceEn`, ... — per-language TTS voice
+- `edgeTtsRate`, `edgeTtsVolume`, `edgeTtsPitch` — TTS parameters
+- `edgeTtsVoiceLists` — cached per-language voice lists (JSON)
 
 Config UI at `package/contents/ui/ConfigGeneral.qml` with additional FSRS controls
 that persist to the `fsrs_params` table:
