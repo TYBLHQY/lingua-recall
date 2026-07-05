@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QtQml>
 
+class QProcess;
 class ReviewDb;
 
 class RecallHelper : public QObject
@@ -49,12 +50,20 @@ public:
     // Direct SQL.
     Q_INVOKABLE QString exec(const QString &sql, const QString &jsonParams = "[]");
 
+    // Process execution (TTS etc.)
+    Q_INVOKABLE void runCommand(const QString &command, const QStringList &args);
+    Q_INVOKABLE void cancelCommand();
+    Q_INVOKABLE QString cacheFilePath(const QString &prefix, const QString &suffix) const;
+
 signals:
     void reviewDbReady();
     void reviewDbError(const QString &message);
+    void commandFinished(int exitCode, QString stdOut, QString stdErr);
+    void commandError(QString errorMessage);
 
 private:
     ReviewDb *m_db = nullptr;
+    QProcess *m_process = nullptr;
 };
 
 #endif // RECALLHELPER_H

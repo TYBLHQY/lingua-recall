@@ -14,6 +14,9 @@ import org.kde.kirigami as Kirigami
 
 import "../lib/LinguaRecallHelper"
 
+// TTS service
+import "services" as Services
+
 PlasmoidItem {
     id: root
 
@@ -33,6 +36,11 @@ PlasmoidItem {
     readonly property int fontSizeSecondary: Math.max(6, fontSizeBase - 1)
     readonly property string fontFamily: Plasmoid.configuration.fontFamily || ""
 
+    // TTS config.
+    readonly property string ttsRate: Plasmoid.configuration.edgeTtsRate || "+0%"
+    readonly property string ttsVolume: Plasmoid.configuration.edgeTtsVolume || "+0%"
+    readonly property string ttsPitch: Plasmoid.configuration.edgeTtsPitch || "+0Hz"
+
     // State.
     property bool pinned: false
 
@@ -48,12 +56,28 @@ PlasmoidItem {
     property int currentCardIndex: 0
     property bool answerRevealed: false
 
+    // TTS.
+    property bool ttsPlaying: false
+
     // Stats cache.
     property var statsCache: ({})
     property bool hasDueContent: false
 
     // DB bridge.
     property RecallHelperQml recall: RecallHelperQml {}
+
+    // TTS service + audio player.
+    Services.EdgeTtsService {
+        id: edgeTtsService
+        onFinished: function(audioFilePath) {
+            root.ttsPlaying = false
+            ttsAudioHelper.runCommand("paplay", [audioFilePath])
+        }
+        onError: function(msg) {
+            root.ttsPlaying = false
+        }
+    }
+    RecallHelper { id: ttsAudioHelper }
 
     // Background status poll — periodically check for due content.
     Timer {
@@ -260,6 +284,38 @@ PlasmoidItem {
         statsCache = recall.parseObject(recall.getStats())
     }
 
+    /// Get the voice name for the current card's source language.
+    function _getTtsVoice() {
+        if (!root.currentCard) return "en-US-EmmaMultilingualNeural"
+        var lang = root.currentCard.source_lang || ""
+        if (lang === "zh") return Plasmoid.configuration.edgeTtsVoiceZh || "zh-CN-XiaoxiaoNeural"
+        if (lang === "en") return Plasmoid.configuration.edgeTtsVoiceEn || "en-US-EmmaMultilingualNeural"
+        if (lang === "de") return Plasmoid.configuration.edgeTtsVoiceDe || "de-DE-KatjaNeural"
+        if (lang === "ja") return Plasmoid.configuration.edgeTtsVoiceJa || "ja-JP-NanamiNeural"
+        if (lang === "fr") return Plasmoid.configuration.edgeTtsVoiceFr || "fr-FR-DeniseNeural"
+        if (lang === "es") return Plasmoid.configuration.edgeTtsVoiceEs || "es-ES-ElviraNeural"
+        return "en-US-EmmaMultilingualNeural"
+    }
+
+    /// Get the text to speak via TTS (prioritise cleaned_input).
+    function _getTtsText() {
+        if (!root.currentCard) return ""
+        if (root.currentCard.cleaned_input) return root.currentCard.cleaned_input
+        return root.currentCard.input_text
+    }
+
+    /// Play the current card's text via TTS.
+    function playCurrentCardTts() {
+        var text = root._getTtsText()
+        if (!text || root.ttsPlaying) return
+        root.ttsPlaying = true
+        edgeTtsService.voice = root._getTtsVoice()
+        edgeTtsService.rate = root.ttsRate
+        edgeTtsService.volume = root.ttsVolume
+        edgeTtsService.pitch = root.ttsPitch
+        edgeTtsService.synthesize(text)
+    }
+
     // Init DB on load.
     Component.onCompleted: {
         if (recall.initReviewDb())
@@ -331,6 +387,11 @@ PlasmoidItem {
             }
             if (event.key === Qt.Key_Space && currentCard && !answerRevealed) {
                 answerRevealed = true
+                event.accepted = true
+            }
+            // 'a' key — play TTS for current card.
+            if (event.key === Qt.Key_A && currentCard) {
+                root.playCurrentCardTts()
                 event.accepted = true
             }
         }
@@ -957,12 +1018,31 @@ PlasmoidItem {
                                 Layout.topMargin: Kirigami.Units.smallSpacing
                             }
                         }
+
+                        // TTS play button (floating, top-right).
+                        QQC2.Button {
+                            visible: currentCard !== null && !root.ttsPlaying
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.margins: Kirigami.Units.smallSpacing
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            icon.name: "media-playback-start"
+                            flat: true
+                            Accessible.name: i18n("Read aloud")
+                            QQC2.ToolTip {
+                                text: i18n("Read aloud (A)")
+                                delay: Kirigami.Units.toolTipDelay
+                                visible: hovered
+                            }
+                            onClicked: root.playCurrentCardTts()
+                        }
                     }
 
                     // Keyboard shortcut hint (below card, after reveal).
                     PlasmaComponents3.Label {
                         visible: answerRevealed && currentCard !== null
-                        text: i18n("Press 1–4 on keyboard")
+                        text: i18n("Press 1–4 on keyboard · A to read aloud")
                         font.pixelSize: root.fontSizeSmall
                         font.family: root.fontFamily || undefined
                         color: Kirigami.Theme.disabledTextColor

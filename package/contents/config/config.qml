@@ -7,4 +7,9 @@ ConfigModel {
         icon: "configure"
         source: "ConfigGeneral.qml"
     }
+    ConfigCategory {
+        name: i18n("TTS Engine")
+        icon: "media-playback-start"
+        source: "TtsConfigCategory.qml"
+    }
 }
