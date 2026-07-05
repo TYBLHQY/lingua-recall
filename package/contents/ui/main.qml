@@ -1021,7 +1021,8 @@ PlasmoidItem {
 
                         // TTS play button (floating, top-right).
                         QQC2.Button {
-                            visible: currentCard !== null && !root.ttsPlaying
+                            visible: currentCard !== null
+                            enabled: !root.ttsPlaying
                             anchors.top: parent.top
                             anchors.right: parent.right
                             anchors.margins: Kirigami.Units.smallSpacing
@@ -1029,6 +1030,7 @@ PlasmoidItem {
                             implicitHeight: Kirigami.Units.iconSizes.medium
                             icon.name: "media-playback-start"
                             flat: true
+                            focusPolicy: Qt.NoFocus
                             Accessible.name: i18n("Read aloud")
                             QQC2.ToolTip {
                                 text: i18n("Read aloud (A)")
