@@ -733,15 +733,24 @@ PlasmoidItem {
                                 Layout.topMargin: Kirigami.Units.smallSpacing
                             }
 
-                            // Translation.
+                            // Translation title
                             PlasmaComponents3.Label {
-                                text: root.extractTranslation(currentCard.result_json)
-                                font.pixelSize: root.fontSizeLarge
+                                text: i18n("Translation")
+                                font.bold: true
+                                font.pixelSize: root.fontSizeSmall
                                 font.family: root.fontFamily || undefined
-                                font.weight: Font.Bold
-                                color: Kirigami.Theme.linkColor
+                                color: Kirigami.Theme.neutralTextColor
+                                Layout.topMargin: Kirigami.Units.smallSpacing
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            // Translation text (plain, no center/bold/link).
+                            PlasmaComponents3.Label {
+                                text: root.extractTranslation(currentCard.result_json)
+                                font.pixelSize: root.fontSizeBase
+                                font.family: root.fontFamily || undefined
+                                Layout.fillWidth: true
                                 wrapMode: Text.WordWrap
                                 visible: text.length > 0
                             }
