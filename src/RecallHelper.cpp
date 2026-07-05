@@ -6,6 +6,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QFileInfo>
 #include <QProcess>
 #include <QStandardPaths>
 
@@ -178,4 +179,29 @@ void RecallHelper::cancelCommand()
         m_process->kill();
         m_process->waitForFinished(3000);
     }
+}
+
+bool RecallHelper::fileExists(const QString &filePath) const
+{
+    return QFileInfo::exists(filePath);
+}
+
+void RecallHelper::cleanTtsCache(const QString &cacheDir, int maxFiles)
+{
+    QDir dir(cacheDir);
+    if (!dir.exists()) return;
+
+    auto files = dir.entryInfoList(QDir::Files, QDir::Time | QDir::Reversed);
+    if (files.size() <= maxFiles) return;
+
+    for (int i = 0; i < files.size() - maxFiles; ++i)
+        QFile::remove(files.at(i).absoluteFilePath());
+}
+
+QString RecallHelper::cacheDir(const QString &subdir) const
+{
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation);
+    QString fullDir = dir + QStringLiteral("/linguaspanner/") + subdir;
+    QDir().mkpath(fullDir);
+    return fullDir;
 }

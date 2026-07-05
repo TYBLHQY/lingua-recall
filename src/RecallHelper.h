@@ -54,6 +54,9 @@ public:
     Q_INVOKABLE void runCommand(const QString &command, const QStringList &args);
     Q_INVOKABLE void cancelCommand();
     Q_INVOKABLE QString cacheFilePath(const QString &prefix, const QString &suffix) const;
+    Q_INVOKABLE bool fileExists(const QString &filePath) const;
+    Q_INVOKABLE void cleanTtsCache(const QString &cacheDir, int maxFiles);
+    Q_INVOKABLE QString cacheDir(const QString &subdir) const;
 
 signals:
     void reviewDbReady();
