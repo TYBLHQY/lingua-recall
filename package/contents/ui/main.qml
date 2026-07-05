@@ -58,6 +58,8 @@ PlasmoidItem {
 
     // TTS.
     property bool ttsPlaying: false
+    property string _ttsPlayingText: ""
+    property bool _ttsRetrying: false
 
     // Stats cache.
     property var statsCache: ({})
@@ -70,14 +72,52 @@ PlasmoidItem {
     Services.EdgeTtsService {
         id: edgeTtsService
         onFinished: function(audioFilePath) {
-            root.ttsPlaying = false
+            root.ttsPlaying = true
             ttsAudioHelper.runCommand("paplay", [audioFilePath])
         }
         onError: function(msg) {
             root.ttsPlaying = false
+            root._ttsPlayingText = ""
+            root._ttsRetrying = false
         }
     }
-    RecallHelper { id: ttsAudioHelper }
+    RecallHelper {
+        id: ttsAudioHelper
+        onCommandFinished: function(exitCode, stdOut, stdErr) {
+            if (exitCode === 0) {
+                // Playback succeeded
+                root.ttsPlaying = false
+                root._ttsPlayingText = ""
+                root._ttsRetrying = false
+                return
+            }
+
+            // paplay failed — likely a corrupt cached audio file
+            var text = root._ttsPlayingText
+            if (!text) {
+                root.ttsPlaying = false
+                return
+            }
+
+            // Delete the corrupt cached file and retry synthesis once
+            if (root._ttsRetrying) {
+                // Second failure — give up
+                root.ttsPlaying = false
+                root._ttsPlayingText = ""
+                root._ttsRetrying = false
+                return
+            }
+
+            root._ttsRetrying = true
+            var cacheDir = edgeTtsService._cacheDir
+            var cacheKey = edgeTtsService._cacheKey(text)
+            if (cacheDir && cacheKey) {
+                var badFile = cacheDir + "/" + cacheKey
+                ttsAudioHelper.removeFile(badFile)
+            }
+            edgeTtsService.synthesize(text)
+        }
+    }
 
     // Background status poll — periodically check for due content.
     Timer {
@@ -309,6 +349,8 @@ PlasmoidItem {
         var text = root._getTtsText()
         if (!text || root.ttsPlaying) return
         root.ttsPlaying = true
+        root._ttsPlayingText = text
+        root._ttsRetrying = false
         edgeTtsService.voice = root._getTtsVoice()
         edgeTtsService.rate = root.ttsRate
         edgeTtsService.volume = root.ttsVolume

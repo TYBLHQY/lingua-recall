@@ -186,6 +186,11 @@ bool RecallHelper::fileExists(const QString &filePath) const
     return QFileInfo::exists(filePath);
 }
 
+bool RecallHelper::removeFile(const QString &filePath)
+{
+    return QFile::remove(filePath);
+}
+
 void RecallHelper::cleanTtsCache(const QString &cacheDir, int maxFiles)
 {
     QDir dir(cacheDir);

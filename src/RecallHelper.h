@@ -55,6 +55,8 @@ public:
     Q_INVOKABLE void cancelCommand();
     Q_INVOKABLE QString cacheFilePath(const QString &prefix, const QString &suffix) const;
     Q_INVOKABLE bool fileExists(const QString &filePath) const;
+    /// Remove a file from disk. Returns true if successful.
+    Q_INVOKABLE bool removeFile(const QString &filePath);
     Q_INVOKABLE void cleanTtsCache(const QString &cacheDir, int maxFiles);
     Q_INVOKABLE QString cacheDir(const QString &subdir) const;
 
