@@ -66,10 +66,6 @@ install(TARGETS lingua_recall_helper
 )
 
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/LinguaRecallHelper/qmldir"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaRecallHelper
-)
-install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/LinguaRecallHelper/plugins.qmltypes"
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaRecallHelper
     OPTIONAL
